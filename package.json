@@ -1,22 +1,19 @@
 {
   "name": "sage-tutor",
   "version": "0.1.0",
-  "description": "A free, standalone AI tutor for high school students that teaches step by step instead of giving answers. Runs on your own computer with Ollama.",
+  "description": "A free AI tutor for high school students that teaches step by step instead of giving answers. Runs entirely in the browser.",
   "type": "module",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
-    "test": "node --test",
-    "make-codes": "node scripts/make-codes.js"
+    "build": "node scripts/build.js",
+    "start": "node scripts/build.js && node scripts/serve.js",
+    "test": "node --test"
   },
   "engines": {
     "node": ">=20"
   },
-  "dependencies": {
+  "devDependencies": {
+    "@mlc-ai/web-llm": "^0.2.85",
     "dompurify": "^3.4.16",
-    "dotenv": "^18.0.6",
-    "express": "^5.2.1",
     "marked": "^18.1.0"
   }
 }

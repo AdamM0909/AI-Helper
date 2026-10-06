@@ -2,8 +2,8 @@
   "name": "Sage tutor",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
   "postCreateCommand": "npm install",
-  "forwardPorts": [3000],
+  "forwardPorts": [8080],
   "portsAttributes": {
-    "3000": { "label": "Sage" }
+    "8080": { "label": "Sage" }
   }
 }

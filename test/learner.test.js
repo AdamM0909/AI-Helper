@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createLearner, recordCheck, setLessonPlan } from "../src/learner.js";
+import { createLearner, recordCheck, setLessonPlan } from "../public/js/learner.js";
 
 function learnerWithPlan() {
   const learner = createLearner({ subject: "English grammar" });

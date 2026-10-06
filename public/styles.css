@@ -109,3 +109,22 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .sidebar { border-right: 0; border-bottom: 1px solid var(--border); max-height: 32vh; padding: 12px 16px; }
 }
+
+/* AI size picker and loading */
+.sizes { display: grid; gap: 8px; }
+.size {
+  display: flex; gap: 10px; align-items: flex-start; font-weight: 400;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); cursor: pointer;
+}
+.size:has(input:checked) { border-color: var(--accent); }
+.size input { width: auto; margin-top: 4px; accent-color: var(--accent); }
+.notice { border: 1px solid #c0392b; border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; }
+.notice p { margin: 6px 0 0; }
+.loading { display: grid; gap: 10px; }
+.loading p { margin: 0; }
+.bar.big { height: 10px; border-radius: 5px; }
+.bar > span#loading-bar, .bar > span#chat-loading-bar { background: var(--accent); width: 2%; }
+.chat-loading { display: grid; gap: 6px; padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--surface); font-size: 0.9rem; color: var(--muted); }
+.small-print { font-size: 0.8rem; margin-top: 16px; }
+.chip:disabled { opacity: 0.5; cursor: default; }
+.primary:disabled:hover, .chip:disabled:hover { border-color: var(--border); }
