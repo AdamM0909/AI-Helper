@@ -8,7 +8,7 @@ Sage is a tutor for high school students who are stuck on something, like diagra
 - **Adapts to your pace.** Every answer is graded and tracked per concept. Get a few right in a row and it speeds up. Miss twice and it slows down and explains it a different way.
 - **Won't do your homework.** If you paste assignment questions, it teaches the skill with its own similar examples, then lets you do the real ones.
 
-A sidebar shows the lesson plan and how far you've got on each concept (new → learning → getting it → mastered). Progress is saved in your browser, so you can come back days later.
+A sidebar shows the lesson plan and how far you've got on each concept (new → learning → getting it → mastered). Progress is saved in your browser, so you can come back days later, and Sage doesn't take up your storage (see below).
 
 **It's free, and it doesn't need a server.** Sage is a web page hosted on GitHub Pages. The AI (an open model run with [WebLLM](https://webllm.mlc.ai)) runs inside each student's own browser, on their own device. There's no account, no API key and no subscription, nobody's laptop has to stay on, and nothing a student types leaves their device.
 
@@ -16,17 +16,30 @@ A sidebar shows the lesson plan and how far you've got on each concept (new → 
 
 Open the link, for example `https://adamm0909.github.io/AI-Helper/`, fill in what you're stuck on, pick an AI size, and start.
 
-The first time, the AI downloads (1 to 5 GB depending on size), which takes a few minutes. After that, the browser keeps it, and Sage loads in seconds.
+Each visit, the AI downloads (1 to 5 GB depending on size) and loads into your device's memory.
 
 | AI size | Download | Good for |
 |---|---|---|
-| Light | about 1 GB | Phones, Chromebooks, older laptops |
-| Standard | about 2 GB | Most laptops |
-| Strong | about 5 GB | Gaming PCs, newer Macs. Teaches best. |
+| Light | 1 GB | Phones, Chromebooks, older laptops |
+| Standard | 2 GB | Most laptops |
+| Strong | 5 GB | Gaming PCs, newer Macs. Teaches best. |
+
+### Storage: Sage cleans up after itself
+
+By default, **Sage uses none of your storage.** The AI only needs to be on disk while it loads. Once it's in memory, Sage deletes the downloaded copy, and the chat keeps working until you close the tab. (You do need enough free space for that download while it loads.) The catch is that it downloads again on every visit, which takes a few minutes, so use Wi-Fi.
+
+If you'd rather have Sage load in seconds, tick **"Keep the AI on this device"** on the start screen. Then:
+
+- The sidebar and start screen show how much space Sage is using, with a **Remove it** button.
+- When you master everything in a lesson plan, Sage offers to **free up the space**.
+- If you switch AI sizes, the old one is deleted automatically.
+- Anything left behind (for example, if you closed the tab mid-download) is cleaned up the next time you open Sage.
+
+Your chat progress is tiny (a few kilobytes) and is saved either way.
 
 **What it needs:** a browser with WebGPU. That means recent Chrome or Edge (Windows, Mac, Chromebook, Android) or Safari on an up-to-date iPhone or Mac. Sage tells you if your browser can't run it. If a size crashes or runs slowly, click **New topic** and choose a smaller one.
 
-**School networks** sometimes block the AI download (it comes from huggingface.co). If it won't download at school, do the first load at home; after that it's stored on the device.
+**School networks** sometimes block the AI download (it comes from huggingface.co). If it won't download at school, tick **"Keep the AI on this device"** and do the first load at home. After that, it loads from the device without downloading.
 
 **Sage can make mistakes.** Free models that fit in a browser are much smaller than ChatGPT or Claude. Sage is good for practice and explanations, but double-check anything important with your teacher or textbook.
 

@@ -1,6 +1,6 @@
 import { createLearner, summary } from "./js/learner.js";
 import { tutorTurn } from "./js/tutor.js";
-import { MODEL_SIZES, checkDevice, isDownloaded, loadEngine } from "./js/engine.js";
+import { MODEL_SIZES, checkDevice, isDownloaded, loadEngine, removeDownloads, storageUsed } from "./js/engine.js";
 
 const $ = (sel) => document.querySelector(sel);
 const LEVEL_NAMES = ["new", "learning", "getting it", "mastered"];
@@ -78,6 +78,45 @@ function showProgress(progress) {
   );
 }
 
+// ---- Storage ----
+
+// Whether to keep the AI stored on this device between visits. Off by default
+// so Sage doesn't take up students' storage.
+const keepAI = () => store.get("sageKeep") === true;
+
+function formatBytes(bytes) {
+  return bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1e6))} MB`;
+}
+
+async function anythingStored() {
+  if (!device?.ok) return false;
+  for (const size of Object.keys(MODEL_SIZES)) if (await isDownloaded(size, device.fast)) return true;
+  return false;
+}
+
+// Shows or hides the "taking up X GB / Remove it" messages.
+async function refreshStorage() {
+  const stored = await anythingStored();
+  const used = stored ? await storageUsed() : null;
+  const amount = used ? formatBytes(used) : "some space";
+  document.querySelectorAll(".storage-amount").forEach((el) => (el.textContent = amount));
+  $("#storage-start").hidden = !stored;
+  $("#storage-sidebar").hidden = !stored;
+  if (!stored) $("#finished").hidden = true;
+  return stored;
+}
+
+document.addEventListener("click", async (e) => {
+  if (!e.target.closest(".remove-ai")) return;
+  await removeDownloads();
+  store.set("sageKeep", false);
+  startForm.keep.checked = false;
+  await refreshStorage();
+  await renderSizes();
+  $("#finished").hidden = true;
+  if (!$("#app").hidden) addMessage("tutor", "Done! Sage's AI has been removed from this device. You can keep chatting until you close this tab. Next time, it will download again.");
+});
+
 function setSendEnabled(enabled) {
   $("#send").disabled = !enabled;
   document.querySelectorAll(".quick .chip").forEach((b) => (b.disabled = !enabled));
@@ -114,6 +153,11 @@ async function ensureEngine(size, bar, text) {
   if (loadingEngine) return loadingEngine;
   const cached = await isDownloaded(size, device.fast);
   const verb = cached ? "Loading Sage from your device" : "Downloading Sage's brain";
+  $("#loading-hint").textContent = cached
+    ? "Almost ready…"
+    : keepAI()
+      ? "This takes a few minutes the first time. Keep this tab open. After that it loads in seconds."
+      : "This takes a few minutes. Keep this tab open. Sage deletes the download from your device as soon as it's loaded.";
   text.textContent = `${verb}…`;
   bar.style.width = "2%";
   loadingEngine = loadEngine(size, device.fast, ({ progress }) => {
@@ -121,10 +165,13 @@ async function ensureEngine(size, bar, text) {
     bar.style.width = `${Math.max(2, percent)}%`;
     text.textContent = `${verb}… ${percent}%`;
   })
-    .then((engine) => {
+    .then(async (engine) => {
       llm = engine;
       llmSize = size;
       store.set("sageSize", size);
+      // The model is in memory now, so the stored copy is only needed for next time.
+      await (keepAI() ? removeDownloads({ keep: size, fast: device.fast }) : removeDownloads());
+      refreshStorage();
       return engine;
     })
     .finally(() => (loadingEngine = null));
@@ -156,7 +203,8 @@ $("#subject-chips").addEventListener("click", (e) => {
 startForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   $("#start-error").hidden = true;
-  const { size, ...profile } = Object.fromEntries(new FormData(startForm));
+  const { size, keep, ...profile } = Object.fromEntries(new FormData(startForm));
+  store.set("sageKeep", Boolean(keep));
   startForm.hidden = true;
   $("#loading").hidden = false;
   try {
@@ -183,10 +231,13 @@ $("#new-session").addEventListener("click", () => {
   $("#messages").replaceChildren();
   showProgress({ topic: "", concepts: [] });
   startForm.reset();
+  startForm.keep.checked = keepAI();
   startForm.hidden = false;
+  $("#finished").hidden = true;
   $("#app").hidden = true;
   $("#start").hidden = false;
   renderSizes();
+  refreshStorage();
 });
 
 function openChat() {
@@ -220,6 +271,8 @@ async function send(text) {
       bubble.classList.add("typing");
     } else if (event.type === "progress") {
       showProgress(event.progress);
+      const done = event.progress.concepts.length > 0 && event.progress.concepts.every((c) => c.level === 3);
+      if (done) refreshStorage().then((stored) => ($("#finished").hidden = !stored));
     }
   };
 
@@ -273,7 +326,11 @@ document.querySelector(".quick").addEventListener("click", (e) => {
     $("#unsupported").hidden = false;
     $("#start-button").disabled = true;
   }
+  startForm.keep.checked = keepAI();
+  // Clean up anything left behind, e.g. a download interrupted by closing the tab.
+  if (device.ok && !keepAI()) await removeDownloads();
   await renderSizes();
+  await refreshStorage();
   if (!device.ok || !session?.learner) return;
 
   // Pick up where the student left off.

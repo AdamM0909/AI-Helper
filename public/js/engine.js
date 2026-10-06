@@ -1,7 +1,8 @@
-// Runs the AI model inside the browser with WebLLM. The model downloads once
-// (from Hugging Face) and is then stored by the browser, so later visits load
-// it straight from the device. Nothing the student types leaves their device.
-import { CreateWebWorkerMLCEngine, hasModelInCache } from "../vendor/web-llm.js";
+// Runs the AI model inside the browser with WebLLM. The model downloads from
+// Hugging Face into browser storage, then loads into the device's memory.
+// Students can keep the stored copy for fast loading or have Sage delete it
+// as soon as it's loaded. Nothing the student types leaves their device.
+import { CreateWebWorkerMLCEngine, hasModelInCache, deleteModelAllInfoInCache } from "../vendor/web-llm.js";
 import { createThinkFilter } from "./think.js";
 
 // Each size has a fast version (needs the GPU's "shader-f16" feature) and a
@@ -9,19 +10,19 @@ import { createThinkFilter } from "./think.js";
 export const MODEL_SIZES = {
   light: {
     label: "Light",
-    detail: "about 1 GB, for phones, Chromebooks and older laptops",
+    detail: "1 GB download, for phones, Chromebooks and older laptops",
     fast: "Qwen2.5-1.5B-Instruct-q4f16_1-MLC",
     compatible: "Qwen2.5-1.5B-Instruct-q4f32_1-MLC",
   },
   standard: {
     label: "Standard",
-    detail: "about 2 GB, for most laptops",
+    detail: "2 GB download, for most laptops",
     fast: "Qwen2.5-3B-Instruct-q4f16_1-MLC",
     compatible: "Qwen2.5-3B-Instruct-q4f32_1-MLC",
   },
   strong: {
     label: "Strong",
-    detail: "about 5 GB, for gaming PCs and newer Macs; teaches best",
+    detail: "5 GB download, for gaming PCs and newer Macs; teaches best",
     fast: "Qwen2.5-7B-Instruct-q4f16_1-MLC",
     compatible: "Qwen2.5-7B-Instruct-q4f32_1-MLC",
   },
@@ -46,6 +47,33 @@ function modelIdFor(size, fast) {
 
 export async function isDownloaded(size, fast) {
   return hasModelInCache(modelIdFor(size, fast)).catch(() => false);
+}
+
+const ALL_MODEL_IDS = Object.values(MODEL_SIZES).flatMap((s) => [s.fast, s.compatible]);
+
+// Deletes stored AI downloads from this device. A model that's already loaded
+// keeps working until the tab closes, because it's in memory, not on disk.
+//   keep: a size to leave in place (used when switching sizes)
+export async function removeDownloads({ keep, fast } = {}) {
+  const keepId = keep ? modelIdFor(keep, fast) : null;
+  for (const id of ALL_MODEL_IDS) {
+    if (id !== keepId) await deleteModelAllInfoInCache(id).catch(() => {});
+  }
+  if (!keepId && "caches" in self) {
+    // Sweep anything else WebLLM stored, such as a half-finished download.
+    const names = await caches.keys().catch(() => []);
+    await Promise.all(names.filter((n) => n.startsWith("webllm/")).map((n) => caches.delete(n)));
+  }
+}
+
+// Bytes of storage this site is using on the device, or null if unknown.
+export async function storageUsed() {
+  try {
+    const { usage } = await navigator.storage.estimate();
+    return usage ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // Loads the model and returns the small interface the tutor uses.

@@ -52,8 +52,17 @@
         <fieldset>
           <legend>AI size</legend>
           <div id="sizes" class="sizes"></div>
-          <p class="muted">Downloads once, then loads from your device. Bigger is smarter but needs a stronger device.</p>
+          <p class="muted">Bigger is smarter but needs a stronger device.</p>
+          <label class="check">
+            <input type="checkbox" name="keep">
+            <span>Keep the AI on this device so it loads in seconds next time.
+              <span class="muted">If you leave this off, Sage deletes it as soon as it's loaded and uses none of your storage, but downloads it again on each visit (use Wi-Fi).</span></span>
+          </label>
         </fieldset>
+        <p id="storage-start" class="storage" hidden>
+          Sage's AI is taking up <b class="storage-amount"></b> on this device.
+          <button type="button" class="link remove-ai">Remove it</button>
+        </p>
         <p id="start-error" class="form-error" role="alert" hidden></p>
         <button type="submit" class="primary" id="start-button">Let's start</button>
         <p class="muted">Everything stays on your device. Sage never sees your info, but still don't type personal details like your address or phone number.</p>
@@ -62,7 +71,7 @@
       <div id="loading" class="loading" hidden>
         <p id="loading-text">Getting Sage ready…</p>
         <div class="bar big"><span id="loading-bar"></span></div>
-        <p class="muted">The first time takes a few minutes while the AI downloads. Keep this tab open. After that it loads in seconds.</p>
+        <p class="muted" id="loading-hint">This can take a few minutes while the AI downloads. Keep this tab open.</p>
       </div>
     </div>
   </main>
@@ -79,6 +88,10 @@
         <span><i class="dot l0"></i>new</span><span><i class="dot l1"></i>learning</span>
         <span><i class="dot l2"></i>getting it</span><span><i class="dot l3"></i>mastered</span>
       </div>
+      <p id="storage-sidebar" class="muted small-print" hidden>
+        The AI is stored on this device (<span class="storage-amount"></span>).
+        <button type="button" class="link remove-ai">Remove it</button>
+      </p>
       <p class="muted small-print">Sage can make mistakes. Double-check important things with your teacher or textbook.</p>
     </aside>
 
@@ -86,6 +99,10 @@
       <div id="chat-loading" class="chat-loading" hidden>
         <span id="chat-loading-text">Loading Sage…</span>
         <div class="bar"><span id="chat-loading-bar"></span></div>
+      </div>
+      <div id="finished" class="finished" hidden>
+        🎉 You've mastered everything in this plan! Done studying for now?
+        <button type="button" class="link remove-ai">Free up <span class="storage-amount"></span></button>
       </div>
       <div id="messages" class="messages" aria-live="polite"></div>
       <form id="chat-form" class="composer">
