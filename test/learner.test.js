@@ -55,12 +55,12 @@ test("replacing the plan keeps progress on concepts that carry over", () => {
   assert.equal(learner.concepts[1].attempts, 0);
 });
 
-test("finishing the whole plan triggers a mixed review", () => {
+test("finishing the whole plan triggers a celebration", () => {
   const learner = learnerWithPlan();
   for (let i = 0; i < 3; i++) recordCheck(learner, "Subject and verb", "correct");
   let result;
   for (let i = 0; i < 3; i++) result = recordCheck(learner, "Adjectives and adverbs", "correct");
-  assert.match(result.pacing, /mixed review/);
+  assert.match(result.pacing, /Celebrate/);
 });
 
 test("accented concept names are tracked correctly", () => {

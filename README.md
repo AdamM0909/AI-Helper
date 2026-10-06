@@ -8,7 +8,7 @@ Sage is a tutor for high school students who are stuck on something, like diagra
 - **Adapts to your pace.** Every answer is graded and tracked per concept. Get a few right in a row and it speeds up. Miss twice and it slows down and explains it a different way.
 - **Won't do your homework.** If you paste assignment questions, it teaches the skill with its own similar examples, then lets you do the real ones.
 
-A sidebar shows the lesson plan and how far you've got on each concept (new → learning → getting it → mastered). Progress is saved in your browser, so you can come back days later, and Sage doesn't take up your storage (see below).
+A sidebar shows the lesson plan and how far you've got on each concept (new → learning → getting it → mastered). Progress is saved in your browser, so you can come back later, and Sage cleans up its storage when you're done (see below). There's a light and dark mode, too.
 
 **It's free, and it doesn't need a server.** Sage is a web page hosted on GitHub Pages. The AI (an open model run with [WebLLM](https://webllm.mlc.ai)) runs inside each student's own browser, on their own device. There's no account, no API key and no subscription, nobody's laptop has to stay on, and nothing a student types leaves their device.
 
@@ -16,7 +16,7 @@ A sidebar shows the lesson plan and how far you've got on each concept (new → 
 
 Open the link, for example `https://adamm0909.github.io/AI-Helper/`, fill in what you're stuck on, pick an AI size, and start.
 
-Each visit, the AI downloads (1 to 5 GB depending on size) and loads into your device's memory.
+The first time, the AI downloads (1 to 5 GB depending on size), which takes a few minutes. After that, it stays ready on the device, **even after closing the tab or the browser** (for example, when students have to close everything before a test), so Sage opens in seconds.
 
 | AI size | Download | Good for |
 |---|---|---|
@@ -24,22 +24,18 @@ Each visit, the AI downloads (1 to 5 GB depending on size) and loads into your d
 | Standard | 2 GB | Most laptops |
 | Strong | 5 GB | Gaming PCs, newer Macs. Teaches best. |
 
-### Storage: Sage cleans up after itself
+### Storage: Sage tidies up after itself
 
-By default, **Sage uses none of your storage.** The AI only needs to be on disk while it loads. Once it's in memory, Sage deletes the downloaded copy, and the chat keeps working until you close the tab. (You do need enough free space for that download while it loads.) The catch is that it downloads again on every visit, which takes a few minutes, so use Wi-Fi.
+- **When a pathway is finished,** Sage celebrates, then asks if you'd like to delete the chat and free up the space. You can say yes or keep going.
+- **After 5 days without using Sage,** the next time you open it, Sage clears the old chat and the downloaded AI to give your storage back, and lets you know.
+- **Anytime,** the start screen and sidebar show how much space Sage is using, with a **Free up space** button.
+- Switching AI sizes deletes the old one automatically.
 
-If you'd rather have Sage load in seconds, tick **"Keep the AI on this device"** on the start screen. Then:
-
-- The sidebar and start screen show how much space Sage is using, with a **Remove it** button.
-- When you master everything in a lesson plan, Sage offers to **free up the space**.
-- If you switch AI sizes, the old one is deleted automatically.
-- Anything left behind (for example, if you closed the tab mid-download) is cleaned up the next time you open Sage.
-
-Your chat progress is tiny (a few kilobytes) and is saved either way.
+A web page can't run when it's closed, so the 5-day cleanup happens the next time Sage is opened. Browsers also clear site storage by themselves when a device runs low on space.
 
 **What it needs:** a browser with WebGPU. That means recent Chrome or Edge (Windows, Mac, Chromebook, Android) or Safari on an up-to-date iPhone or Mac. Sage tells you if your browser can't run it. If a size crashes or runs slowly, click **New topic** and choose a smaller one.
 
-**School networks** sometimes block the AI download (it comes from huggingface.co). If it won't download at school, tick **"Keep the AI on this device"** and do the first load at home. After that, it loads from the device without downloading.
+**School networks** sometimes block the AI download (it comes from huggingface.co). If it won't download at school, do the first load at home. After that, it loads from the device without downloading.
 
 **Sage can make mistakes.** Free models that fit in a browser are much smaller than ChatGPT or Claude. Sage is good for practice and explanations, but double-check anything important with your teacher or textbook.
 
@@ -59,7 +55,8 @@ Every time you change something on `main`, the site updates by itself.
 | `public/js/subjects.js` | Teaching notes and common mistakes for each subject. Add your own here. |
 | `public/js/learner.js` | Tracks progress per concept and decides the pacing advice. Plain code, no AI, so the rules are predictable and easy to change |
 | `public/js/engine.js` | Loads the AI in the browser and talks to it |
-| `public/app.js`, `index.html`, `styles.css` | The web page |
+| `public/js/housekeeping.js` | When Sage tidies up: after a finished pathway, or after 5 days without use |
+| `public/app.js`, `index.html`, `styles.css`, `theme.js` | The web page, including light and dark mode |
 | `scripts/build.js` | Assembles the site, with its libraries, into `_site/` |
 
 ### What makes a small AI teach well
@@ -72,7 +69,8 @@ Browser-sized models are small, so Sage gives them extra structure:
 4. **Subject notes.** The tutor gets teaching tips and common mistakes for the subject (sentence diagram layout, DR MRS VANDERTRAMP for French, sign errors in algebra, and so on).
 5. **Short, clear rules plus an example reply.** Small models copy examples much better than they follow long instructions.
 6. **Answer-leak check.** If the tutor's reply gives away the answer the student got wrong, Sage throws it out and writes a hint instead.
-7. **Fits the model's memory.** Only as much recent conversation as fits is sent, so the instructions never get cut off.
+7. **A warm voice, with a kindness check.** Sage is told to be nurturing: praise effort, treat mistakes as normal, and never say things like "wrong", "obviously" or "it's easy". If a reply still sounds harsh, Sage rewrites it in a gentler way.
+8. **Fits the model's memory.** Only as much recent conversation as fits is sent, so the instructions never get cut off.
 
 ## Working on the code
 

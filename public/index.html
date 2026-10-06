@@ -5,94 +5,124 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' https:; img-src 'self' data:; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
   <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light dark">
   <title>Sage Tutor</title>
-  <meta name="description" content="A free AI tutor that teaches step by step instead of giving answers. Runs entirely in your browser.">
+  <meta name="description" content="A free, friendly AI tutor that helps you learn step by step instead of giving answers. Runs entirely in your browser.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <script src="vendor/marked.js"></script>
   <script src="vendor/purify.js"></script>
 </head>
 <body>
-  <main id="start" class="start">
-    <div class="card">
-      <h1>Hi, I'm Sage 👋</h1>
-      <p class="lede">I won't just hand you answers. We'll figure it out together, one step at a time, at your pace.</p>
+  <svg width="0" height="0" class="sprites" aria-hidden="true">
+    <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5 19c0-8 5-14 15-15-1 10-7 15-15 15Z" fill="currentColor" opacity=".9"/><path d="M5 19 13 11" stroke="var(--on-accent)" stroke-width="1.6" stroke-linecap="round" fill="none"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></g></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5Z" fill="currentColor"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12 20 4l-6 16-2.5-6.5L4 12Z" fill="currentColor"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></symbol>
+  </svg>
 
-      <div id="unsupported" class="notice" hidden>
-        <strong>This browser can't run Sage.</strong>
+  <main id="start" class="start">
+    <!-- Lives inside the start screen so it disappears with it; the chat view has its own toggle. -->
+    <button type="button" class="theme-toggle floating" aria-label="Switch between light and dark mode">
+      <svg class="icon-sun"><use href="#i-sun"/></svg><svg class="icon-moon"><use href="#i-moon"/></svg>
+    </button>
+    <section class="hero">
+      <div class="logo-mark"><svg><use href="#i-leaf"/></svg></div>
+      <h1>Stuck on something?<br><span>Let's figure it out together.</span></h1>
+      <p class="lede">I'm Sage. I won't just hand you answers. I'll guide you one step at a time, at whatever pace feels right, until it clicks.</p>
+      <ul class="promises">
+        <li><span>💡</span>Hints, not answers</li>
+        <li><span>🐢</span>Goes at your pace</li>
+        <li><span>🔒</span>Private, runs on your device</li>
+      </ul>
+    </section>
+
+    <div class="card">
+      <div id="tidy-notice" class="notice friendly" hidden></div>
+      <div id="unsupported" class="notice warn" hidden>
+        <strong>This browser can't run Sage yet.</strong>
         <p>Sage runs its AI right on your device, which needs a browser with WebGPU. Try the latest <b>Chrome</b> or <b>Edge</b> on a laptop or Chromebook, Chrome on Android, or Safari on an up-to-date iPhone or Mac.</p>
       </div>
 
       <form id="start-form">
-        <label><span>Your first name <span class="optional">(optional)</span></span>
-          <input name="name" maxlength="40" autocomplete="given-name">
-        </label>
-        <label>Grade
-          <select name="grade">
-            <option>9th grade</option><option>10th grade</option><option>11th grade</option><option>12th grade</option><option>Other</option>
-          </select>
-        </label>
+        <div class="row">
+          <label><span>Your first name <span class="optional">(optional)</span></span>
+            <input name="name" maxlength="40" autocomplete="given-name" placeholder="What should I call you?">
+          </label>
+          <label>Grade
+            <select name="grade">
+              <option>9th grade</option><option>10th grade</option><option>11th grade</option><option>12th grade</option><option>Other</option>
+            </select>
+          </label>
+        </div>
         <fieldset>
-          <legend>Subject</legend>
+          <legend>What subject?</legend>
           <div class="chips" id="subject-chips">
-            <button type="button" class="chip">English grammar</button>
-            <button type="button" class="chip">French</button>
-            <button type="button" class="chip">Spanish</button>
-            <button type="button" class="chip">Algebra</button>
-            <button type="button" class="chip">Geometry</button>
-            <button type="button" class="chip">Chemistry</button>
-            <button type="button" class="chip">Biology</button>
-            <button type="button" class="chip">History</button>
+            <button type="button" class="chip" data-subject="English grammar">✏️ English grammar</button>
+            <button type="button" class="chip" data-subject="French">🥐 French</button>
+            <button type="button" class="chip" data-subject="Spanish">🌮 Spanish</button>
+            <button type="button" class="chip" data-subject="Algebra">➗ Algebra</button>
+            <button type="button" class="chip" data-subject="Geometry">📐 Geometry</button>
+            <button type="button" class="chip" data-subject="Chemistry">🧪 Chemistry</button>
+            <button type="button" class="chip" data-subject="Biology">🧬 Biology</button>
+            <button type="button" class="chip" data-subject="History">🏛️ History</button>
           </div>
           <input name="subject" placeholder="…or type any subject" maxlength="60" required>
         </fieldset>
-        <label>What are you stuck on?
-          <textarea name="goal" rows="3" maxlength="500" placeholder="e.g. I don't get how to diagram sentences with prepositional phrases" required></textarea>
+        <label>What's tricky right now?
+          <textarea name="goal" rows="3" maxlength="500" placeholder="It's okay if you're not sure how to explain it. Something like: I don't get how to diagram sentences with prepositional phrases" required></textarea>
         </label>
         <fieldset>
           <legend>AI size</legend>
           <div id="sizes" class="sizes"></div>
-          <p class="muted">Bigger is smarter but needs a stronger device.</p>
-          <label class="check">
-            <input type="checkbox" name="keep">
-            <span>Keep the AI on this device so it loads in seconds next time.
-              <span class="muted">If you leave this off, Sage deletes it as soon as it's loaded and uses none of your storage, but downloads it again on each visit (use Wi-Fi).</span></span>
-          </label>
+          <p class="muted">Bigger is smarter but needs a stronger device. It downloads once and stays ready, even after you close the tab.</p>
         </fieldset>
         <p id="storage-start" class="storage" hidden>
-          Sage's AI is taking up <b class="storage-amount"></b> on this device.
-          <button type="button" class="link remove-ai">Remove it</button>
+          Sage's AI is using <b class="storage-amount"></b> on this device.
+          <button type="button" class="link remove-ai">Free up this space</button>
         </p>
         <p id="start-error" class="form-error" role="alert" hidden></p>
-        <button type="submit" class="primary" id="start-button">Let's start</button>
-        <p class="muted">Everything stays on your device. Sage never sees your info, but still don't type personal details like your address or phone number.</p>
+        <button type="submit" class="primary big" id="start-button">Let's start learning</button>
+        <p class="muted fine">Everything stays on your device. Please don't type personal details like your address or phone number.</p>
       </form>
 
       <div id="loading" class="loading" hidden>
+        <div class="logo-mark pulse"><svg><use href="#i-leaf"/></svg></div>
         <p id="loading-text">Getting Sage ready…</p>
         <div class="bar big"><span id="loading-bar"></span></div>
-        <p class="muted" id="loading-hint">This can take a few minutes while the AI downloads. Keep this tab open.</p>
+        <p class="muted" id="loading-hint"></p>
       </div>
     </div>
   </main>
 
   <div id="app" class="app" hidden>
+    <header class="topbar">
+      <div class="brand"><div class="logo-mark small"><svg><use href="#i-leaf"/></svg></div><span>Sage</span></div>
+      <div class="topbar-actions">
+        <button type="button" class="theme-toggle" aria-label="Switch between light and dark mode">
+          <svg class="icon-sun"><use href="#i-sun"/></svg><svg class="icon-moon"><use href="#i-moon"/></svg>
+        </button>
+        <button id="new-session" class="ghost">New topic</button>
+      </div>
+    </header>
+
     <aside class="sidebar">
-      <div class="sidebar-head">
-        <h2 id="topic">Your plan</h2>
-        <button id="new-session" class="link">New topic</button>
+      <p class="eyebrow">Your pathway</p>
+      <h2 id="topic">Getting to know you</h2>
+      <div id="path-summary" class="path-summary" hidden>
+        <div class="bar"><span id="path-bar"></span></div>
+        <span id="path-count"></span>
       </div>
-      <p id="plan-empty" class="muted">Sage will build a plan once it knows where you are.</p>
-      <ol id="concepts" class="concepts"></ol>
-      <div class="legend muted">
-        <span><i class="dot l0"></i>new</span><span><i class="dot l1"></i>learning</span>
-        <span><i class="dot l2"></i>getting it</span><span><i class="dot l3"></i>mastered</span>
+      <p id="plan-empty" class="muted">Once Sage knows where you are, your learning pathway will show up here, step by step.</p>
+      <ol id="concepts" class="pathway"></ol>
+      <div class="sidebar-foot">
+        <p id="storage-sidebar" class="muted fine" hidden>
+          The AI is using <span class="storage-amount"></span> on this device. <button type="button" class="link remove-ai">Free up space</button>
+        </p>
+        <p class="muted fine">Sage is still learning too and can make mistakes. Double-check important things with your teacher or textbook.</p>
       </div>
-      <p id="storage-sidebar" class="muted small-print" hidden>
-        The AI is stored on this device (<span class="storage-amount"></span>).
-        <button type="button" class="link remove-ai">Remove it</button>
-      </p>
-      <p class="muted small-print">Sage can make mistakes. Double-check important things with your teacher or textbook.</p>
     </aside>
 
     <section class="chat">
@@ -100,23 +130,23 @@
         <span id="chat-loading-text">Loading Sage…</span>
         <div class="bar"><span id="chat-loading-bar"></span></div>
       </div>
-      <div id="finished" class="finished" hidden>
-        🎉 You've mastered everything in this plan! Done studying for now?
-        <button type="button" class="link remove-ai">Free up <span class="storage-amount"></span></button>
-      </div>
       <div id="messages" class="messages" aria-live="polite"></div>
-      <form id="chat-form" class="composer">
-        <textarea id="input" rows="1" placeholder="Type your answer or question…" autocomplete="off"></textarea>
-        <button type="submit" class="primary" id="send">Send</button>
-      </form>
-      <div class="quick">
-        <button type="button" class="chip small" data-say="Can I get a hint?">💡 Hint</button>
-        <button type="button" class="chip small" data-say="Can you explain that a different way?">🔄 Explain differently</button>
-        <button type="button" class="chip small" data-say="Can you slow down? I'm a bit lost.">🐢 Slow down</button>
-        <button type="button" class="chip small" data-say="I think I've got this. Can you give me a harder one?">🚀 Harder</button>
+      <div class="composer-wrap">
+        <div class="quick">
+          <button type="button" class="chip small" data-say="Can I get a hint?">💡 Hint</button>
+          <button type="button" class="chip small" data-say="Can you explain that a different way?">🔄 Explain differently</button>
+          <button type="button" class="chip small" data-say="Can we slow down a little? I'm a bit lost.">🐢 Slow down</button>
+          <button type="button" class="chip small" data-say="I think I've got this. Can you give me a harder one?">🚀 Harder</button>
+        </div>
+        <form id="chat-form" class="composer">
+          <textarea id="input" rows="1" placeholder="Type your answer or question… there are no silly questions" autocomplete="off"></textarea>
+          <button type="submit" class="send" id="send" aria-label="Send"><svg><use href="#i-send"/></svg></button>
+        </form>
       </div>
     </section>
   </div>
+
+  <div id="toast" class="toast" role="status" hidden></div>
 
   <script type="module" src="app.js"></script>
 </body>

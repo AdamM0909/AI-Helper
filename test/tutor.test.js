@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createLearner, setLessonPlan } from "../public/js/learner.js";
-import { tutorTurn, detectSituation, revealsAnswer, recentHistory } from "../public/js/tutor.js";
+import { tutorTurn, detectSituation, revealsAnswer, recentHistory, soundsHarsh } from "../public/js/tutor.js";
 
 // Stands in for the in-browser AI: returns scripted grades and replies, records prompts.
 function fakeLLM({ grades = [], replies = [] }) {
@@ -54,7 +54,7 @@ test("a wrong answer: progress drops, pacing and the hidden answer reach the tut
 
   assert.equal(session.learner.concepts[0].attempts, 2);
   const system = llm.calls.chat[1][0].content;
-  assert.match(system, /INCORRECT/);
+  assert.match(system, /not quite right yet/);
   assert.match(system, /SLOW DOWN/);
   assert.match(system, /DO NOT reveal it: the correct answer is "je suis allé"/);
 });
@@ -121,4 +121,29 @@ test("if grading fails or returns junk, the student still gets a reply", async (
   await tutorTurn(llm, session, "hi", () => {});
   await tutorTurn(llm, session, "hello", () => {});
   assert.deepEqual(session.messages.map((m) => m.content), ["hi", "one", "hello", "two"]);
+});
+
+test("harsh replies are rewritten in a gentler voice", async () => {
+  const llm = fakeLLM({ replies: ["That's wrong. Obviously the verb is first.", "Not quite yet! Let's look at the verb together."] });
+  const session = { learner: createLearner(), messages: [] };
+  const events = [];
+  await tutorTurn(llm, session, "is it the noun?", (e) => events.push(e));
+  assert.ok(events.some((e) => e.type === "reset"));
+  assert.match(llm.calls.chat[1][0].content, /sounded harsh/);
+  assert.equal(session.messages.at(-1).content, "Not quite yet! Let's look at the verb together.");
+});
+
+test("harshness check", () => {
+  assert.equal(soundsHarsh("No. Try again."), true);
+  assert.equal(soundsHarsh("That's incorrect, the answer is different."), true);
+  assert.equal(soundsHarsh("This is simply the subject."), true);
+  assert.equal(soundsHarsh("Not quite yet, but you're close!"), false);
+  assert.equal(soundsHarsh("Nobody gets this right away. Know what? You're close."), false);
+  assert.equal(soundsHarsh("The word 'wrong' is an adjective here."), false);
+});
+
+test("the tutor's instructions are nurturing", async () => {
+  const llm = fakeLLM({});
+  await tutorTurn(llm, { learner: createLearner(), messages: [] }, "hi", () => {});
+  assert.match(llm.calls.chat[0][0].content, /Praise effort/);
 });

@@ -8,44 +8,49 @@ const REPLY_MAX_TOKENS = 450;
 
 // Kept short and concrete on purpose: small models follow a few clear rules
 // and one example far better than a long list of guidelines.
-const TUTOR_RULES = `You are Sage, a friendly tutor for high school students. You help them learn to do it themselves. You never just give answers.
+const TUTOR_RULES = `You are Sage, a warm, patient tutor for high school students. Many of them have been struggling and feel discouraged, so you are kind, calm and encouraging. You help them learn to do it themselves; you never just give answers.
+
+Your voice:
+- Nurturing and on their side. Say "we" and "let's". Believe in them out loud ("you're closer than you think").
+- Praise effort and thinking, not just right answers ("I like how you broke that down").
+- Treat mistakes as a normal part of learning: "Not quite yet, but that's a really common mix-up." Never say "wrong", "no", "incorrect", "obviously", "simply", "just", "easy" or "clearly".
+- Never sound disappointed, impatient or like you're lecturing. No sarcasm.
 
 Every reply:
-1. React to what the student said: say exactly what they got right, or give ONE hint about what's wrong.
-2. Teach at most one small idea, with a short example.
-3. End with exactly one question for the student to answer.
+1. Respond kindly to what they said: name exactly what they got right, or gently give ONE hint about what to look at again.
+2. Teach at most one small idea, with a short, friendly example.
+3. End with exactly one question that guides them to the next step.
 Keep replies under 120 words.
 
 Rules:
-- Never give the final answer to the student's question or homework. Teach with your own similar example instead.
-- If they're wrong, don't say the right answer. Give a hint so they can find it themselves.
-- If they ask for the answer, say you'll get there together, then give a hint.
-- If they've tried 3 or more times, show a worked example of a SIMILAR problem, then ask them to try theirs again.
-- Be warm and encouraging. Use examples from sports, music, games and food.
-- Use Markdown. Put conjugations, diagrams and math steps in tables or code blocks.
+- Never give the final answer to their question or homework. Teach with your own similar example instead.
+- If they're not quite right, don't say the right answer. Guide them with a hint so they can find it.
+- If they ask for the answer, reassure them that you'll get there together, then give a hint.
+- If they've tried 3 or more times, show a worked example of a SIMILAR problem, then invite them to try theirs again.
+- Use examples from sports, music, games and food. Use Markdown, and put conjugations, diagrams and math steps in tables or code blocks.
 - Don't ask for personal details. If they seem upset about something serious, kindly suggest talking to a trusted adult.
 
 Example of a good reply:
-Student: what's "I went" in french? just tell me
-Sage: Let's work it out, it'll stick better that way! "Went" is past tense, so we use the **passé composé**. *Aller* is one of the verbs that uses **être** as its helper instead of avoir:
+Student: what's "I went" in french? i keep getting it wrong. just tell me
+Sage: You're not alone, this one trips up almost everyone at first! Let's figure it out together. "Went" is past tense, so we use the **passé composé**. *Aller* is one of the special verbs that uses **être** as its helper instead of avoir:
 | helper (être) | + | past participle |
 |---|---|---|
 | je suis | + | allé |
-So what do you think "I went" is? And bonus: what would "she went" be?`;
+Using that pattern, what do you think "I went" would be?`;
 
 // ---- Spotting situations that small models handle badly ----
 
 export function detectSituation(text) {
   const notes = [];
   if (/\b(just|pls|please)?\s*(tell|give|show) me (the )?(answers?|solution)|what('s| is) the answer|do (it|this|my homework) for me|answer (these|this) for me|can you (just )?(solve|do) (it|this|these)/i.test(text)) {
-    notes.push("The student is asking for the answer. Don't give it. Be kind, say they can do this, and give a hint or a smaller first step.");
+    notes.push("The student is asking for the answer. Don't give it. Be warm and understanding (they may be tired or stressed), tell them you believe they can do this, and offer a hint or a smaller first step.");
   }
   const listedQuestions = text.split("\n").filter((line) => /^\s*(\d+|[a-h])[.)]\s+\S/i.test(line)).length;
   if (listedQuestions >= 2 || /\b(question|problem|exercise) \d+/i.test(text)) {
     notes.push("The student pasted assignment questions. Don't answer any of them. Pick the skill they need, teach it with your OWN similar example, then ask them to try the first question themselves.");
   }
   if (/\b(i give up|i'?m (so )?(dumb|stupid)|this is (so )?(dumb|stupid|pointless)|i hate (this|it)|i can'?t do (this|it)|i'?ll never (get|understand)|so confused|frustrat)/i.test(text)) {
-    notes.push("The student sounds frustrated. Start by reassuring them that this is hard and they're making progress. Make the next step smaller and easier.");
+    notes.push("The student sounds frustrated or down on themselves. Start with real empathy: this is hard, feeling stuck is normal, and needing help doesn't mean they're not smart. Point to something they've already done well. Then make the next step smaller and easier.");
   }
   return notes;
 }
@@ -166,7 +171,8 @@ async function assess(llm, session, signal, emit) {
     const hints = Number.isInteger(a.hints_used) && a.hints_used >= 0 ? a.hints_used : 0;
     const { pacing } = recordCheck(session.learner, a.concept.trim().slice(0, 80), a.result, hints);
     expected = typeof a.correct_answer === "string" ? a.correct_answer.trim().slice(0, 300) : "";
-    guidance.push(`Their answer was ${a.result.toUpperCase()}. ${pacing}`);
+    const verdict = { correct: "right", partial: "partly right", incorrect: "not quite right yet" }[a.result];
+    guidance.push(`Their answer was ${verdict}. ${pacing}`);
     if (expected) {
       guidance.push(
         a.result === "correct"
@@ -189,6 +195,14 @@ export function revealsAnswer(reply, expected) {
   return answer.length >= 4 && normalize(reply).includes(answer);
 }
 
+// Phrases that make a struggling student feel judged. Small models fall back
+// on these even when told not to, so replies that use them get rewritten.
+const HARSH = /\b(that'?s|this is|you'?re|your answer is) (wrong|incorrect|not correct)\b|^\s*(no|wrong|incorrect)[.!,]|\b(obviously|simply|clearly)\b|\bas i (already )?(said|told you|explained)\b|\bthat'?s (easy|basic)\b|\bit'?s easy\b/im;
+
+export function soundsHarsh(reply) {
+  return HARSH.test(reply);
+}
+
 // Runs one student turn: grades their message, then streams the tutor's
 // reply through `emit` and saves both to session.messages.
 export async function tutorTurn(llm, session, studentText, emit, { signal } = {}) {
@@ -208,13 +222,18 @@ export async function tutorTurn(llm, session, studentText, emit, { signal } = {}
 
   let reply = await generate(guidance);
 
-  // Small models sometimes give the answer away anyway. Catch that and try once more.
+  // Small models sometimes give the answer away or sound harsh anyway.
+  // Catch that and rewrite once.
+  const fixes = [];
   if (revealsAnswer(reply, expected)) {
+    fixes.push(`IMPORTANT: Do not write "${expected}" or any other form of the answer. Give a hint that helps them work it out instead.`);
+  }
+  if (soundsHarsh(reply)) {
+    fixes.push(`IMPORTANT: Your last draft sounded harsh. Be gentle and encouraging. Instead of "wrong" or "incorrect", say something like "not quite yet" and guide them. Don't use "obviously", "simply", "clearly" or "easy".`);
+  }
+  if (fixes.length > 0) {
     emit({ type: "reset" });
-    reply = await generate([
-      ...guidance,
-      `IMPORTANT: Do not write "${expected}" or any other form of the answer. Give a hint that helps them work it out instead.`,
-    ]);
+    reply = await generate([...guidance, ...fixes]);
   }
 
   session.messages.push({ role: "assistant", content: reply });
