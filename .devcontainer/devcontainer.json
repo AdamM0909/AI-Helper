@@ -4,10 +4,6 @@
   "postCreateCommand": "npm install",
   "forwardPorts": [3000],
   "portsAttributes": {
-    "3000": { "label": "Sage", "onAutoForward": "openBrowser" }
-  },
-  "secrets": {
-    "ANTHROPIC_API_KEY": { "description": "Your Anthropic API key from console.anthropic.com" },
-    "ACCESS_CODES": { "description": "Access codes from `npm run make-codes`" }
+    "3000": { "label": "Sage" }
   }
 }

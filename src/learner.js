@@ -36,8 +36,10 @@ function newConcept(id, name) {
 
 function slug(text) {
   return String(text)
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "") // "Être" and "Etre" are the same concept
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 40);
 }

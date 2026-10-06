@@ -1,104 +1,123 @@
 # Sage: an AI tutor that teaches instead of answering
 
-Sage is a tutor for high school students who are stuck on something, like diagramming sentences, French verb tenses, algebra or chemistry. It's built on Claude, but unlike a general chatbot it won't just give the answer. It:
+Sage is a tutor for high school students who are stuck on something, like diagramming sentences, French verb tenses, algebra or chemistry. Unlike a general chatbot, it won't just give the answer. It:
 
 - **Finds out where you are first.** It asks a couple of questions before explaining anything.
 - **Teaches in small steps** and checks after each one with a question you have to answer.
 - **Gives hints instead of answers.** When you're wrong, it looks for the misconception and nudges you. Hints get more specific if you keep struggling.
-- **Adapts to your pace.** Every answer is recorded per concept. Get a few right in a row and it speeds up. Miss twice and it slows down and explains it a different way.
+- **Adapts to your pace.** Every answer is graded and recorded per concept. Get a few right in a row and it speeds up. Miss twice and it slows down and explains it a different way.
 - **Won't do your homework.** If you paste assignment questions, it teaches the skill with its own similar examples, then lets you do the real ones and checks your thinking.
 
 A sidebar shows the lesson plan and how far you've got on each concept (new → learning → getting it → mastered).
 
-## Put it online for your friends (free, from GitHub)
+**It's completely standalone and free.** The AI runs on your own computer using [Ollama](https://ollama.com) and a free, open model. There's no account, no API key and no subscription, and once the model is downloaded it doesn't need the internet.
 
-GitHub stores the code, but it can't run a server that keeps your API key secret. So Sage runs on **[Render](https://render.com)**, a hosting service with a free plan that deploys straight from your GitHub repo. Every time you push to GitHub, Render updates the site automatically.
+## Set it up
 
-**1. Get an API key and cap your spending**
-- Make an account at <https://console.anthropic.com/> and create an API key.
-- In the Console's billing settings, set a **monthly spend limit** (for example $10). This is your hard safety net: Anthropic stops all requests once it's reached, no matter what.
-- Anthropic API accounts are for adults, and Anthropic has extra rules for apps that people under 18 use. Have a parent or teacher own the account and read the [usage policy](https://www.anthropic.com/legal/aup).
+You need a computer with **8 GB of memory or more** (16 GB is better). It works on Windows, Mac and Linux.
 
-**2. Make an access code for each friend**
+**1. Install the tools (once)**
+- [Node.js](https://nodejs.org/) (the LTS version)
+- [Ollama](https://ollama.com/download)
 
-Open the repo in a Codespace (see below) or on any computer with Node, and run:
+**2. Download an AI model (once)**
+
+Open a terminal (on Windows: Command Prompt or PowerShell) and run:
 
 ```bash
-npm run make-codes -- alex sam jordan
+ollama pull qwen2.5:7b
 ```
 
-It prints a code for each friend and an `ACCESS_CODES=...` line to copy. (You can also write codes yourself in the form `name:code,name:code`. Make them long and random.)
+It's about a 5 GB download. Pick a different model if your computer is weaker or stronger:
 
-**3. Deploy on Render**
-1. Sign up at <https://render.com> using your GitHub account.
-2. Click **New → Blueprint** and pick this repository (and the branch the code is on). Render reads `render.yaml` and sets everything up.
-3. When it asks, paste in your `ANTHROPIC_API_KEY` and the `ACCESS_CODES` line.
-4. Click **Deploy**. After a few minutes you get a link like `https://sage-tutor-xxxx.onrender.com`.
+| Your computer | Model | Set in `.env` |
+|---|---|---|
+| 8 GB memory or an older laptop | `llama3.2:3b` (2 GB) | `AI_MODEL=llama3.2:3b` |
+| 16 GB memory (most laptops) | `qwen2.5:7b` (5 GB), the default | (nothing to change) |
+| 32 GB memory, a gaming PC or a newer Mac | `qwen2.5:14b` (9 GB) | `AI_MODEL=qwen2.5:14b` |
 
-**4. Share it.** Send each friend the link and *their own* code. To cut someone off, delete their code from `ACCESS_CODES` in Render's **Environment** settings.
+Bigger models teach better and make fewer mistakes, but they answer more slowly.
 
-About the free plan: the site goes to sleep after 15 minutes with nobody using it, so the first visit after that takes about a minute to load. Each restart also clears open chats and resets the daily counters, which is one more reason to set the spend limit in step 1.
+**3. Get Sage**
+
+On this repo's GitHub page, click **Code → Download ZIP** and unzip it (or `git clone` it). In a terminal, go into the folder and run:
+
+```bash
+npm install
+cp .env.example .env            # on Windows: copy .env.example .env
+npm run make-codes -- alex sam  # one code per person, including you
+```
+
+Copy the `ACCESS_CODES=...` line it prints into `.env`, replacing the example one.
+
+**4. Start it**
+
+Make sure Ollama is running (it starts with your computer by default), then:
+
+```bash
+npm start
+```
+
+Open <http://localhost:3000> and enter your code.
+
+**Tip:** Sage remembers more of the conversation if you raise Ollama's context length to 8k or more, in Ollama's settings or by starting it with `OLLAMA_CONTEXT_LENGTH=8192 ollama serve`.
+
+## Share it with friends
+
+Sage runs on your computer, so your computer has to be on and running `npm start` while friends use it. Give each friend **their own** code.
+
+- **Friends on the same Wi-Fi** (at your house, for example): when Sage starts, it prints an address like `http://192.168.1.20:3000`. Friends open that on their phone or laptop. If your computer asks whether to allow network access, say yes.
+- **Friends anywhere**, using a free Cloudflare tunnel (no account needed): install [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/), then in a second terminal run:
+
+  ```bash
+  cloudflared tunnel --url http://localhost:3000
+  ```
+
+  It prints a link like `https://some-random-words.trycloudflare.com`. Send that to your friends. The link changes every time you restart the tunnel.
+
+To cut someone off, delete their code from `.env` and restart Sage.
+
+One computer can answer one person at a time, so if several friends use it at once, they take turns and replies are slower.
 
 ### Safety features
 
 | Protection | What it does |
 |---|---|
-| Access codes | Nobody can use Sage (or your API key) without a code you gave them. Each friend's chats are private to their code. |
+| Access codes | Nobody can use Sage without a code you gave them. Each friend's chats are private to their code. |
 | Wrong-code lockout | 10 wrong codes from one address locks it out for 15 minutes, so codes can't be guessed. |
-| Daily message limit | Each friend gets `DAILY_MESSAGES_PER_FRIEND` messages a day (default 150). |
-| Daily spending cap | Sage pauses for everyone once its estimated spend for the day reaches `DAILY_BUDGET_USD` (default $3). |
-| Chat length limit | Very long chats get expensive, so after 150 messages Sage asks the student to start a new topic. |
-| Stops unread replies | If a student closes the tab mid-reply, the request to Claude is cancelled so you don't pay for it. |
-| Privacy | The server logs who sent a message, never what they wrote. Sage won't ask for personal details. Chats live only in memory and are deleted after a day of inactivity. |
+| Daily message limit | Each friend gets `DAILY_MESSAGES_PER_FRIEND` messages a day (default 150), so nobody can hog your computer. |
+| Chat length limit | After 150 messages, Sage asks the student to start a new topic. |
+| Stops unread replies | If a student closes the tab mid-reply, Sage stops working on it. |
+| Privacy | Everything stays on your computer. The server logs who sent a message, never what they wrote. Sage won't ask for personal details. Chats live only in memory and are deleted after a day of inactivity. |
 | Browser security | Security headers (Content Security Policy and others) and sanitized output block malicious scripts. |
 
-## Run it from GitHub with Codespaces
-
-Codespaces runs the app inside GitHub, which is handy for trying changes. It's not meant for friends to use, because it shuts down when you're not using it.
-
-1. In your repo on GitHub, go to **Settings → Secrets and variables → Codespaces** and add `ANTHROPIC_API_KEY` and `ACCESS_CODES`.
-2. Click **Code → Codespaces → Create codespace**. It installs everything automatically.
-3. In the terminal, run `npm start`. A browser tab opens with Sage.
-
-## Run it on your own computer
-
-You need [Node.js](https://nodejs.org/) 20 or newer.
-
-```bash
-npm install
-cp .env.example .env      # then add your API key and access codes to .env
-npm start
-```
-
-Open <http://localhost:3000>.
-
-`npm test` runs the tests. They use a fake Claude client, so they don't need a key or cost anything. GitHub also runs them automatically on every push (see the **Actions** tab).
+**Free models make more mistakes than big paid ones.** Sage is good for practice and explanations, but tell your friends to double-check anything important with their teacher or textbook.
 
 ## How it works
 
 | File | What it does |
 |---|---|
-| `src/tutor.js` | The tutor's instructions (the teaching rules), the two tools Claude uses, and the loop that talks to Claude |
+| `src/tutor.js` | The tutor's teaching rules, and each turn's two steps (grade the answer, then reply) |
 | `src/learner.js` | Tracks progress per concept and decides the pacing advice. Plain code, no AI, so the rules are predictable and easy to change |
-| `src/guard.js` | Access codes, daily limits, spending cap and wrong-code lockout |
-| `server.js` | Small Express server: checks access, creates sessions and streams replies to the browser |
+| `src/llm.js` | Talks to the AI model |
+| `src/guard.js` | Access codes, daily limits and wrong-code lockout |
+| `server.js` | Small web server: checks access, creates sessions and streams replies to the browser |
 | `public/` | The web page |
 
-How pacing works: Claude has two tools the student never sees.
+Each time a student sends a message, Sage makes two calls to the AI:
 
-1. `set_lesson_plan`: once Claude knows what the student needs, it breaks the topic into a few concepts.
-2. `record_check`: every time the student answers a check question, Claude records whether it was correct, partly correct or wrong, and how many hints it took. `learner.js` updates that concept's progress and sends back instructions such as *"SLOW DOWN, try a new angle"* or *"On a roll, ask a harder question"*, which Claude follows.
+1. **Grade:** a short call that returns structured data. Did the student just answer a check question? Which concept was it, was it right, and how many hints did it take? On the first message, this call also builds the lesson plan. `learner.js` records the result and works out pacing advice such as *"SLOW DOWN, try a new angle"* or *"On a roll, ask a harder question"*.
+2. **Reply:** the tutor writes its response, with the lesson plan, progress and pacing advice included in its instructions.
 
-Three correct answers in a row without hints counts as mastered. Right answers that needed hints don't count toward mastery. To change these rules, edit `src/learner.js`.
+Splitting it up this way makes even small models adapt reliably. Three correct answers in a row without hints counts as mastered, and answers that needed hints don't count toward mastery. To change these rules, edit `src/learner.js`.
 
-## Good to know
+**Other AI servers:** Sage uses the standard OpenAI-compatible chat API, so it also works with [LM Studio](https://lmstudio.ai) (`AI_BASE_URL=http://localhost:1234/v1`), llama.cpp, or a cloud service (set `AI_BASE_URL`, `AI_MODEL` and `AI_API_KEY`). You're never locked into one company.
 
-- **Cost:** it uses the `claude-opus-5-5` model. Set `TUTOR_MODEL` to use a different one, and update the prices in `src/guard.js` to match so the spending cap stays accurate.
-- **The daily spending cap is an estimate.** It's calculated from token counts. The Console spend limit is the real hard limit.
+**Tests:** `npm test` runs them using fake AI servers, so they don't need a model. GitHub also runs them automatically on every push (see the **Actions** tab). The repo opens in GitHub Codespaces for editing code, but Codespaces is too slow to run the AI model itself.
 
 ## Ideas for next steps
 
-- Upload a photo of a worksheet so Sage can see the exact problem (Claude can read images)
-- Save progress to a database so students can come back days later
+- Upload a photo of a worksheet (some Ollama models, like `llama3.2-vision`, can read images)
+- Save progress to a file so students can come back days later
 - Spaced review: bring back old concepts after a few days so they stick
 - A teacher or parent view showing which concepts a student struggles with

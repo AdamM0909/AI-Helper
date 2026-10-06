@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createGuard, estimateCost, parseAccessCodes } from "../src/guard.js";
+import { createGuard, parseAccessCodes } from "../src/guard.js";
 
 function setup(options = {}) {
   let time = Date.parse("2026-10-06T12:00:00Z");
@@ -42,21 +42,4 @@ test("each friend has their own daily message limit that resets the next day", (
   assert.equal(guard.remaining("aaaa-bbbb"), 0);
   clock.advance(24 * 60 * 60 * 1000);
   assert.equal(guard.canSend("aaaa-bbbb").ok, true);
-});
-
-test("the daily spending cap stops everyone", () => {
-  const { guard } = setup({ dailyBudgetUsd: 1 });
-  guard.recordUsage({ output_tokens: 50_000 }); // $1.00 at $20/M
-  assert.equal(guard.canSend("cccc-dddd").ok, false);
-  assert.match(guard.canSend("cccc-dddd").error, /tomorrow/);
-});
-
-test("cost estimate counts every kind of token", () => {
-  const cost = estimateCost({
-    input_tokens: 1_000_000,
-    output_tokens: 1_000_000,
-    cache_creation_input_tokens: 1_000_000,
-    cache_read_input_tokens: 1_000_000,
-  });
-  assert.equal(cost.toFixed(2), "29.20");
 });

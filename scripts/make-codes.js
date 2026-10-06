@@ -10,5 +10,5 @@ if (names.length === 0) names.push("friend1", "friend2", "friend3");
 const entries = names.map((name) => `${name.replace(/[,:]/g, "")}:${chunk()}-${chunk()}-${chunk()}`);
 console.log("Give each friend their own code:\n");
 for (const entry of entries) console.log(`  ${entry.replace(":", "  →  ")}`);
-console.log("\nThen put this line in .env (or in your host's environment settings):\n");
+console.log("\nThen put this line in your .env file:\n");
 console.log(`ACCESS_CODES=${entries.join(",")}`);

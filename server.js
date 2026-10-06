@@ -1,11 +1,12 @@
 import "dotenv/config";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import express from "express";
-import Anthropic from "@anthropic-ai/sdk";
 import { createLearner, summary } from "./src/learner.js";
 import { tutorTurn } from "./src/tutor.js";
 import { createGuard, parseAccessCodes } from "./src/guard.js";
+import { createLLM, LLMError } from "./src/llm.js";
 
 const codes = parseAccessCodes(process.env.ACCESS_CODES);
 if (codes.size === 0) {
@@ -13,26 +14,32 @@ if (codes.size === 0) {
   process.exit(1);
 }
 
+const llm = createLLM({
+  baseUrl: process.env.AI_BASE_URL || "http://localhost:11434/v1", // Ollama's default address
+  model: process.env.AI_MODEL || "qwen2.5:7b",
+  apiKey: process.env.AI_API_KEY, // only needed for cloud providers
+});
+
 const guard = createGuard({
   codes,
   dailyMessagesPerCode: Number(process.env.DAILY_MESSAGES_PER_FRIEND) || 150,
-  dailyBudgetUsd: Number(process.env.DAILY_BUDGET_USD) || 3,
 });
 
 const MAX_MESSAGE_CHARS = 4000;
-const MAX_TURNS_PER_SESSION = 150; // long chats get expensive: every turn resends the history
+const MAX_TURNS_PER_SESSION = 150;
 const MAX_SESSIONS = 500;
 const SESSION_IDLE_MS = 24 * 60 * 60 * 1000;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
-const client = new Anthropic();
 
 // Sessions live in memory: restarting the server starts everyone fresh.
 const sessions = new Map();
 
 app.disable("x-powered-by");
-app.set("trust proxy", 1); // hosts like Render sit behind one proxy; needed for the real client IP
+// Only trust forwarded addresses from this computer (e.g. a Cloudflare tunnel),
+// so people on your network can't fake their address to dodge the lockout.
+app.set("trust proxy", "loopback");
 
 app.use((req, res, next) => {
   res.setHeader(
@@ -46,8 +53,7 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "20kb" }));
 app.use(express.static(path.join(here, "public")));
-// Serve the browser libraries from node_modules so the app works offline
-// and on school networks that block CDNs.
+// Serve the browser libraries from node_modules so the app works offline.
 app.get("/vendor/marked.js", (req, res) => res.sendFile(path.join(here, "node_modules/marked/lib/marked.umd.js")));
 app.get("/vendor/purify.js", (req, res) => res.sendFile(path.join(here, "node_modules/dompurify/dist/purify.min.js")));
 app.get("/healthz", (req, res) => res.send("ok"));
@@ -94,12 +100,7 @@ app.post("/api/session", (req, res) => {
 app.get("/api/session/:id", (req, res) => {
   const session = ownSession(req);
   if (!session) return res.status(404).json({ error: "Session not found" });
-  // Only the visible conversation: student messages and the tutor's text.
-  const transcript = session.messages.flatMap((m) => {
-    if (typeof m.content === "string") return [{ role: "student", text: m.content }];
-    const text = m.content.filter((b) => b.type === "text").map((b) => b.text).join("");
-    return m.role === "assistant" && text ? [{ role: "tutor", text }] : [];
-  });
+  const transcript = session.messages.map((m) => ({ role: m.role === "user" ? "student" : "tutor", text: m.content }));
   res.json({ progress: summary(session.learner), transcript, remaining: guard.remaining(req.code) });
 });
 
@@ -126,22 +127,22 @@ app.post("/api/chat", async (req, res) => {
   res.setHeader("Cache-Control", "no-cache");
   const emit = (event) => res.write(JSON.stringify(event) + "\n");
 
-  // Stop paying for a reply nobody will read if the student leaves.
+  // Free up the computer if the student leaves mid-reply.
   const controller = new AbortController();
   res.on("close", () => {
     if (!res.writableFinished) controller.abort();
   });
 
   try {
-    await tutorTurn(client, session, message, emit, {
-      signal: controller.signal,
-      onUsage: (usage) => guard.recordUsage(usage),
-    });
+    await tutorTurn(llm, session, message, emit, { signal: controller.signal });
     emit({ type: "done", remaining: guard.remaining(req.code) });
   } catch (err) {
-    if (!(err instanceof Anthropic.APIUserAbortError)) {
-      console.error(err);
-      emit({ type: "error", message: errorMessage(err) });
+    if (err.name !== "AbortError") {
+      console.error(err.message);
+      emit({
+        type: "error",
+        message: err instanceof LLMError ? "Sage's AI isn't running right now. Let whoever runs Sage know." : "Something went wrong. Try again.",
+      });
     }
   } finally {
     session.busy = false;
@@ -149,18 +150,30 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-function errorMessage(err) {
-  if (err instanceof Anthropic.AuthenticationError) return "Sage isn't set up right (the API key is missing or invalid). Let whoever runs it know.";
-  if (err instanceof Anthropic.RateLimitError) return "Too many requests right now. Wait a moment and try again.";
-  if (err instanceof Anthropic.APIConnectionError) return "Couldn't reach the AI service. Try again in a moment.";
-  if (err instanceof Anthropic.APIError) return `The AI service returned an error (${err.status}). Try again.`;
-  return "Something went wrong. Try again.";
-}
-
 setInterval(() => {
   const cutoff = Date.now() - SESSION_IDLE_MS;
   for (const [id, session] of sessions) if (session.lastActive < cutoff && !session.busy) sessions.delete(id);
 }, 60 * 60 * 1000).unref();
 
+function networkAddresses(port) {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter((a) => a && a.family === "IPv4" && !a.internal)
+    .map((a) => `http://${a.address}:${port}`);
+}
+
 const port = Number(process.env.PORT) || 3000;
-app.listen(port, () => console.log(`Sage tutor running at http://localhost:${port} for ${codes.size} access code(s)`));
+app.listen(port, async () => {
+  console.log(`Sage is running for ${codes.size} access code(s).`);
+  console.log(`  On this computer:      http://localhost:${port}`);
+  for (const url of networkAddresses(port)) console.log(`  Friends on your Wi-Fi: ${url}`);
+
+  const ready = await llm.checkReady();
+  if (ready.reason === "unreachable") {
+    console.warn(`\n⚠ Can't reach the AI at ${process.env.AI_BASE_URL || "http://localhost:11434/v1"}. Install Ollama from https://ollama.com and make sure it's running.`);
+  } else if (ready.reason === "model_missing") {
+    console.warn(`\n⚠ The model "${llm.model}" isn't downloaded yet. Run:  ollama pull ${llm.model}`);
+  } else {
+    console.log(`  AI model:              ${llm.model}`);
+  }
+});

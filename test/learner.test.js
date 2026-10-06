@@ -62,3 +62,12 @@ test("finishing the whole plan triggers a mixed review", () => {
   for (let i = 0; i < 3; i++) result = recordCheck(learner, "Adjectives and adverbs", "correct");
   assert.match(result.pacing, /mixed review/);
 });
+
+test("accented concept names are tracked correctly", () => {
+  const learner = createLearner();
+  setLessonPlan(learner, "Passé composé", ["Être verbs", "Avoir verbs"]);
+  recordCheck(learner, "Etre verbs", "correct");
+  assert.equal(learner.concepts[0].id, "etre-verbs");
+  assert.equal(learner.concepts[0].correct, 1);
+  assert.equal(learner.concepts.length, 2);
+});
