@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sage Tutor</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="/vendor/marked.js"></script>
+  <script src="/vendor/purify.js"></script>
+</head>
+<body>
+  <main id="start" class="start">
+    <div class="card">
+      <h1>Hi, I'm Sage 👋</h1>
+      <p class="lede">I won't just hand you answers. We'll figure it out together, one step at a time, at your pace.</p>
+      <form id="start-form">
+        <label><span>Your first name <span class="optional">(optional)</span></span>
+          <input name="name" maxlength="40" autocomplete="given-name">
+        </label>
+        <label>Grade
+          <select name="grade">
+            <option>9th grade</option><option>10th grade</option><option>11th grade</option><option>12th grade</option><option>Other</option>
+          </select>
+        </label>
+        <fieldset>
+          <legend>Subject</legend>
+          <div class="chips" id="subject-chips">
+            <button type="button" class="chip">English grammar</button>
+            <button type="button" class="chip">French</button>
+            <button type="button" class="chip">Spanish</button>
+            <button type="button" class="chip">Algebra</button>
+            <button type="button" class="chip">Geometry</button>
+            <button type="button" class="chip">Chemistry</button>
+            <button type="button" class="chip">Biology</button>
+            <button type="button" class="chip">History</button>
+          </div>
+          <input name="subject" placeholder="…or type any subject" maxlength="60" required>
+        </fieldset>
+        <label>What are you stuck on?
+          <textarea name="goal" rows="3" maxlength="500" placeholder="e.g. I don't get how to diagram sentences with prepositional phrases" required></textarea>
+        </label>
+        <button type="submit" class="primary">Let's start</button>
+      </form>
+    </div>
+  </main>
+
+  <div id="app" class="app" hidden>
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <h2 id="topic">Your plan</h2>
+        <button id="new-session" class="link">New topic</button>
+      </div>
+      <p id="plan-empty" class="muted">Sage will build a plan once it knows where you are.</p>
+      <ol id="concepts" class="concepts"></ol>
+      <div class="legend muted">
+        <span><i class="dot l0"></i>new</span><span><i class="dot l1"></i>learning</span>
+        <span><i class="dot l2"></i>getting it</span><span><i class="dot l3"></i>mastered</span>
+      </div>
+    </aside>
+
+    <section class="chat">
+      <div id="messages" class="messages" aria-live="polite"></div>
+      <form id="chat-form" class="composer">
+        <textarea id="input" rows="1" placeholder="Type your answer or question…" autocomplete="off"></textarea>
+        <button type="submit" class="primary" id="send">Send</button>
+      </form>
+      <div class="quick">
+        <button type="button" class="chip small" data-say="Can I get a hint?">💡 Hint</button>
+        <button type="button" class="chip small" data-say="Can you explain that a different way?">🔄 Explain differently</button>
+        <button type="button" class="chip small" data-say="Can you slow down? I'm a bit lost.">🐢 Slow down</button>
+        <button type="button" class="chip small" data-say="I think I've got this. Can you give me a harder one?">🚀 Harder</button>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
