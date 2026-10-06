@@ -25,11 +25,11 @@
 
   <main id="start" class="start">
     <!-- Lives inside the start screen so it disappears with it; the chat view has its own toggle. -->
-    <button type="button" class="theme-toggle floating" aria-label="Switch between light and dark mode">
-      <svg class="icon-sun"><use href="#i-sun"/></svg><svg class="icon-moon"><use href="#i-moon"/></svg>
+    <button type="button" class="theme-toggle floating" aria-label="Switch to dark mode">
+      <svg class="icon-moon" width="16" height="16" aria-hidden="true"><use href="#i-moon"/></svg><svg class="icon-sun" width="16" height="16" aria-hidden="true"><use href="#i-sun"/></svg><span class="theme-label">Dark</span>
     </button>
     <section class="hero">
-      <div class="logo-mark"><svg><use href="#i-leaf"/></svg></div>
+      <div class="logo-mark"><svg width="30" height="30" aria-hidden="true"><use href="#i-leaf"/></svg></div>
       <h1>Stuck on something?<br><span>Let's figure it out together.</span></h1>
       <p class="lede">I'm Sage. I won't just hand you answers. I'll guide you one step at a time, at whatever pace feels right, until it clicks.</p>
       <ul class="promises">
@@ -74,11 +74,7 @@
         <label>What's tricky right now?
           <textarea name="goal" rows="3" maxlength="500" placeholder="It's okay if you're not sure how to explain it. Something like: I don't get how to diagram sentences with prepositional phrases" required></textarea>
         </label>
-        <fieldset>
-          <legend>AI size</legend>
-          <div id="sizes" class="sizes"></div>
-          <p class="muted">Bigger is smarter but needs a stronger device. It downloads once and stays ready, even after you close the tab.</p>
-        </fieldset>
+        <p class="muted fine download-note">The first time, Sage downloads its AI (about 5 GB) so it can run right on your device. After that, it stays ready, even after you close the tab.</p>
         <p id="storage-start" class="storage" hidden>
           Sage's AI is using <b class="storage-amount"></b> on this device.
           <button type="button" class="link remove-ai">Free up this space</button>
@@ -89,7 +85,7 @@
       </form>
 
       <div id="loading" class="loading" hidden>
-        <div class="logo-mark pulse"><svg><use href="#i-leaf"/></svg></div>
+        <div class="logo-mark pulse"><svg width="30" height="30" aria-hidden="true"><use href="#i-leaf"/></svg></div>
         <p id="loading-text">Getting Sage ready…</p>
         <div class="bar big"><span id="loading-bar"></span></div>
         <p class="muted" id="loading-hint"></p>
@@ -99,10 +95,10 @@
 
   <div id="app" class="app" hidden>
     <header class="topbar">
-      <div class="brand"><div class="logo-mark small"><svg><use href="#i-leaf"/></svg></div><span>Sage</span></div>
+      <div class="brand"><div class="logo-mark small"><svg width="18" height="18" aria-hidden="true"><use href="#i-leaf"/></svg></div><span>Sage</span></div>
       <div class="topbar-actions">
-        <button type="button" class="theme-toggle" aria-label="Switch between light and dark mode">
-          <svg class="icon-sun"><use href="#i-sun"/></svg><svg class="icon-moon"><use href="#i-moon"/></svg>
+        <button type="button" class="theme-toggle" aria-label="Switch to dark mode">
+          <svg class="icon-moon" width="16" height="16" aria-hidden="true"><use href="#i-moon"/></svg><svg class="icon-sun" width="16" height="16" aria-hidden="true"><use href="#i-sun"/></svg><span class="theme-label">Dark</span>
         </button>
         <button id="new-session" class="ghost">New topic</button>
       </div>
@@ -140,7 +136,7 @@
         </div>
         <form id="chat-form" class="composer">
           <textarea id="input" rows="1" placeholder="Type your answer or question… there are no silly questions" autocomplete="off"></textarea>
-          <button type="submit" class="send" id="send" aria-label="Send"><svg><use href="#i-send"/></svg></button>
+          <button type="submit" class="send" id="send" aria-label="Send"><svg width="18" height="18" aria-hidden="true"><use href="#i-send"/></svg></button>
         </form>
       </div>
     </section>

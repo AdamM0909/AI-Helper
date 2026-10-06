@@ -144,11 +144,14 @@ textarea { resize: vertical; }
 .chip:disabled { opacity: 0.45; cursor: default; }
 
 .theme-toggle {
-  display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px;
-  border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-size: 18px; color: var(--warm);
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text);
+  cursor: pointer; font-size: 0.85rem; font-weight: 600; line-height: 1; transition: border-color 0.2s, transform 0.15s;
 }
-.theme-toggle:hover { border-color: var(--accent); }
+.theme-toggle:hover { border-color: var(--accent); transform: translateY(-1px); }
+.theme-toggle svg { width: 16px; height: 16px; flex: none; color: var(--warm); }
 .theme-toggle.floating { position: fixed; top: 16px; right: 16px; z-index: 5; box-shadow: var(--shadow); }
+/* Light mode shows "moon Dark"; dark mode shows "sun Light". */
 .theme-toggle .icon-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .icon-sun { display: block; }
 :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
@@ -180,13 +183,7 @@ form#start-form { display: grid; gap: 18px; }
 label, legend { display: grid; gap: 6px; font-weight: 650; font-size: 0.95rem; }
 .optional { font-weight: 400; color: var(--muted); }
 fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
-.sizes { display: grid; gap: 8px; }
-.size {
-  display: flex; gap: 12px; align-items: flex-start; font-weight: 400;
-  padding: 11px 14px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-2); cursor: pointer; transition: border-color 0.2s, background 0.2s;
-}
-.size:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
-.size input { width: auto; margin-top: 5px; accent-color: var(--accent); }
+.download-note { margin: 0; }
 .notice { border-radius: 14px; padding: 12px 14px; margin-bottom: 18px; font-size: 0.95rem; }
 .notice p { margin: 6px 0 0; }
 .notice.warn { border: 1px solid var(--danger); }

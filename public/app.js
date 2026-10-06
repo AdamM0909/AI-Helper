@@ -1,6 +1,6 @@
 import { createLearner, summary } from "./js/learner.js";
 import { tutorTurn } from "./js/tutor.js";
-import { MODEL_SIZES, checkDevice, isDownloaded, loadEngine, removeDownloads, storageUsed } from "./js/engine.js";
+import { DOWNLOAD_SIZE, checkDevice, isDownloaded, loadEngine, removeDownloads, storageUsed } from "./js/engine.js";
 import { IDLE_DAYS, idleTooLong, pathwayComplete } from "./js/housekeeping.js";
 
 const $ = (sel) => document.querySelector(sel);
@@ -32,7 +32,6 @@ const store = {
 let session = store.get("sageSession"); // { learner, messages, celebrated }
 let device = null; // result of checkDevice()
 let llm = null;
-let llmSize = null;
 let loadingEngine = null;
 let busy = false;
 let controller = null;
@@ -53,6 +52,15 @@ function currentTheme() {
   return document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 }
 
+// The buttons say what they switch to: "Dark" in light mode, "Light" in dark mode.
+function syncThemeButtons() {
+  const next = currentTheme() === "dark" ? "light" : "dark";
+  document.querySelectorAll(".theme-toggle").forEach((button) => {
+    button.querySelector(".theme-label").textContent = next === "dark" ? "Dark" : "Light";
+    button.setAttribute("aria-label", `Switch to ${next} mode`);
+  });
+}
+
 document.querySelectorAll(".theme-toggle").forEach((button) =>
   button.addEventListener("click", () => {
     const next = currentTheme() === "dark" ? "light" : "dark";
@@ -60,8 +68,11 @@ document.querySelectorAll(".theme-toggle").forEach((button) =>
     try {
       localStorage.setItem("sageTheme", next);
     } catch {}
+    syncThemeButtons();
   }),
 );
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncThemeButtons);
+syncThemeButtons();
 
 // ---- Rendering ----
 
@@ -147,8 +158,7 @@ function formatBytes(bytes) {
 
 async function anythingStored() {
   if (!device?.ok) return false;
-  for (const size of Object.keys(MODEL_SIZES)) if (await isDownloaded(size, device.fast)) return true;
-  return false;
+  return isDownloaded(device.fast);
 }
 
 // Shows or hides the "using X GB / free up space" messages.
@@ -175,7 +185,6 @@ document.addEventListener("click", async (e) => {
   if (!e.target.closest(".remove-ai")) return;
   await removeDownloads();
   await refreshStorage();
-  await renderSizes();
   if (!$("#app").hidden) {
     addMessage("tutor", "All done, the AI has been removed from this device and the space is free again. We can keep going until you close this tab. Next time, Sage will download it again.");
   }
@@ -183,46 +192,25 @@ document.addEventListener("click", async (e) => {
 
 // ---- Loading the AI ----
 
-async function renderSizes() {
-  const saved = store.get("sageSize");
-  const current = MODEL_SIZES[saved] ? saved : device?.suggested || "standard";
-  const rows = await Promise.all(
-    Object.entries(MODEL_SIZES).map(async ([key, size]) => {
-      const downloaded = device?.ok && (await isDownloaded(key, device.fast));
-      const label = document.createElement("label");
-      label.className = "size";
-      label.innerHTML = `<input type="radio" name="size"><span><b></b> <span class="muted"></span></span>`;
-      label.querySelector("input").value = key;
-      label.querySelector("input").checked = key === current;
-      label.querySelector("b").textContent = size.label + (key === device?.suggested ? " (suggested)" : "");
-      label.querySelector(".muted").textContent = downloaded ? "ready on this device" : size.detail;
-      return label;
-    }),
-  );
-  $("#sizes").replaceChildren(...rows);
-}
-
 // Loads (or reuses) the model, reporting progress to the given bar and text.
-async function ensureEngine(size, bar, text) {
-  if (llm && llmSize === size) return llm;
+async function ensureEngine(bar, text) {
+  if (llm) return llm;
   if (loadingEngine) return loadingEngine;
-  const cached = await isDownloaded(size, device.fast);
+  const cached = await isDownloaded(device.fast);
   const verb = cached ? "Waking Sage up" : "Downloading Sage's brain";
   $("#loading-hint").textContent = cached
     ? "Almost ready…"
-    : "This takes a few minutes the first time, so keep this tab open. After that, Sage stays ready on your device, even after you close the tab.";
+    : `The first time, Sage downloads its AI (${DOWNLOAD_SIZE}), which takes a few minutes, so keep this tab open. After that, it stays ready on your device, even after you close the tab.`;
   text.textContent = `${verb}…`;
   bar.style.width = "2%";
-  loadingEngine = loadEngine(size, device.fast, ({ progress }) => {
+  loadingEngine = loadEngine(device.fast, ({ progress }) => {
     const percent = Math.round(progress * 100);
     bar.style.width = `${Math.max(2, percent)}%`;
     text.textContent = `${verb}… ${percent}%`;
   })
     .then(async (engine) => {
       llm = engine;
-      llmSize = size;
-      store.set("sageSize", size);
-      await removeDownloads({ keep: size, fast: device.fast }); // drop any other size
+      await removeDownloads({ keepCurrent: true, fast: device.fast }); // drop older models
       refreshStorage();
       return engine;
     })
@@ -233,7 +221,7 @@ async function ensureEngine(size, bar, text) {
 function friendlyError(err) {
   const message = String(err?.message || err);
   if (/out of memory|device.*lost|allocat/i.test(message)) {
-    return "This AI size is a bit too big for this device. No problem! Reload the page, click \"New topic\" and pick a smaller size.";
+    return "This device ran out of memory while running Sage's AI. Try closing other tabs and apps, then reload the page.";
   }
   if (/fetch|network|Failed to load/i.test(message)) {
     return "Sage couldn't download its AI. Check your internet connection. Some school networks block the download, so you might need to try at home.";
@@ -256,7 +244,6 @@ function showStart(notice) {
   $("#tidy-notice").textContent = notice || "";
   $("#app").hidden = true;
   $("#start").hidden = false;
-  renderSizes();
   refreshStorage();
 }
 
@@ -272,11 +259,11 @@ startForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   $("#start-error").hidden = true;
   $("#tidy-notice").hidden = true;
-  const { size, ...profile } = Object.fromEntries(new FormData(startForm));
+  const profile = Object.fromEntries(new FormData(startForm));
   startForm.hidden = true;
   $("#loading").hidden = false;
   try {
-    await ensureEngine(size, $("#loading-bar"), $("#loading-text"));
+    await ensureEngine($("#loading-bar"), $("#loading-text"));
   } catch (err) {
     console.error(err);
     $("#loading").hidden = true;
@@ -439,7 +426,6 @@ document.querySelector(".quick").addEventListener("click", (e) => {
   }
   markUsed();
 
-  await renderSizes();
   await refreshStorage();
   if (!device.ok || !session?.learner) return;
 
@@ -449,7 +435,7 @@ document.querySelector(".quick").addEventListener("click", (e) => {
   for (const m of session.messages) addMessage(m.role === "user" ? "student" : "tutor", m.content);
   $("#chat-loading").hidden = false;
   try {
-    await ensureEngine(store.get("sageSize") || device.suggested, $("#chat-loading-bar"), $("#chat-loading-text"));
+    await ensureEngine($("#chat-loading-bar"), $("#chat-loading-text"));
     setSendEnabled(true);
     addMessage("tutor", session.messages.length ? "Welcome back! 😊 Ready to pick up where we left off? Tell me what you remember, or ask me anything." : "Welcome back! What would you like to work on?");
   } catch (err) {
