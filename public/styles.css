@@ -128,3 +128,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .small-print { font-size: 0.8rem; margin-top: 16px; }
 .chip:disabled { opacity: 0.5; cursor: default; }
 .primary:disabled:hover, .chip:disabled:hover { border-color: var(--border); }
+
+/* Storage controls */
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; cursor: pointer; }
+.check input { width: auto; margin-top: 5px; accent-color: var(--accent); }
+.check .muted { display: block; }
+.storage { margin: 0; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; font-size: 0.9rem; }
+.finished { padding: 10px 16px; background: var(--student); border-bottom: 1px solid var(--border); font-size: 0.95rem; }
