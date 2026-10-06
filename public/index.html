@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sage Tutor</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <script src="/vendor/marked.js"></script>
   <script src="/vendor/purify.js"></script>
@@ -14,6 +15,9 @@
       <h1>Hi, I'm Sage 👋</h1>
       <p class="lede">I won't just hand you answers. We'll figure it out together, one step at a time, at your pace.</p>
       <form id="start-form">
+        <label>Access code
+          <input name="code" required autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="The code you were given">
+        </label>
         <label><span>Your first name <span class="optional">(optional)</span></span>
           <input name="name" maxlength="40" autocomplete="given-name">
         </label>
@@ -39,7 +43,9 @@
         <label>What are you stuck on?
           <textarea name="goal" rows="3" maxlength="500" placeholder="e.g. I don't get how to diagram sentences with prepositional phrases" required></textarea>
         </label>
+        <p id="start-error" class="form-error" role="alert" hidden></p>
         <button type="submit" class="primary">Let's start</button>
+        <p class="muted">Don't type personal info like your address or phone number. Sage doesn't need it.</p>
       </form>
     </div>
   </main>
@@ -52,6 +58,7 @@
       </div>
       <p id="plan-empty" class="muted">Sage will build a plan once it knows where you are.</p>
       <ol id="concepts" class="concepts"></ol>
+      <p id="remaining" class="muted"></p>
       <div class="legend muted">
         <span><i class="dot l0"></i>new</span><span><i class="dot l1"></i>learning</span>
         <span><i class="dot l2"></i>getting it</span><span><i class="dot l3"></i>mastered</span>

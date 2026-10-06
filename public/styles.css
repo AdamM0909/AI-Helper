@@ -70,6 +70,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
   border-radius: 10px; padding: 10px 18px; font-weight: 600; cursor: pointer;
 }
 .primary:disabled { opacity: 0.5; cursor: default; }
+.form-error { margin: 0; color: #c0392b; font-size: 0.9rem; }
 .link { white-space: nowrap; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; font-size: 0.9rem; }
 
 /* App layout */

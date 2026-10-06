@@ -29,6 +29,8 @@ Formatting: use Markdown. For anything visual, such as a sentence diagram, verb 
   \\ The   |   \\ loudly
 \`\`\`
 
+Privacy: never ask for personal details like their full name, address, phone number, school name or social media, and if they share them, gently suggest they don't need to.
+
 Stay on schoolwork and learning. If a student seems upset or mentions something serious going on in their life, be kind, and encourage them to talk to a trusted adult such as a parent, teacher or school counselor.`;
 
 function systemPrompt(learner) {
@@ -144,7 +146,9 @@ const MAX_TOOL_ROUNDS = 6;
 
 // Runs one student turn: streams the tutor's reply through `emit`, runs any
 // tool calls, and appends everything to session.messages.
-export async function tutorTurn(client, session, studentText, emit) {
+//   signal: aborts the request (e.g. the student closed the tab)
+//   onUsage: called with each response's token usage, for spending limits
+export async function tutorTurn(client, session, studentText, emit, { signal, onUsage } = {}) {
   session.messages.push({ role: "user", content: studentText });
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -159,10 +163,11 @@ export async function tutorTurn(client, session, studentText, emit) {
       system: systemPrompt(session.learner),
       tools: TOOLS,
       messages: session.messages,
-    });
+    }, { signal });
 
     stream.on("text", (text) => emit({ type: "text", text }));
     const message = await stream.finalMessage();
+    onUsage?.(message.usage);
 
     const content = contentToKeep(message.content);
     session.messages.push({ role: "assistant", content });
