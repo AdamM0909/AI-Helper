@@ -101,20 +101,20 @@ function pacingFor(learner, concept, result, hintsUsed) {
     return [
       `SLOW DOWN. The student has missed "${concept.name}" ${concept.missesInRow} times in a row.`,
       "Do not repeat the same explanation. Try a new angle: an everyday analogy, a worked example of a different problem, or break the idea into a smaller first step.",
-      "Then ask an easier question that checks only that smaller step. Be encouraging: struggling is normal.",
+      "Then ask an easier question that checks only that smaller step. Reassure them warmly that this part is tricky for everyone and that they're making progress.",
     ].join(" ");
   }
   if (result === "incorrect") {
-    return `Missed once. Find the specific misconception in their answer, give one targeted hint (not the answer), and let them try again.`;
+    return `Not quite yet. Gently find the specific misconception in their answer, give one targeted hint (not the answer), and encourage them to try again.`;
   }
   if (result === "partial") {
-    return `Partly right. Point out what they got right, then ask a guiding question about the missing piece.`;
+    return `Partly right. Warmly point out what they got right, then ask a guiding question about the missing piece.`;
   }
   if (concept.level === 3) {
     const next = learner.concepts.find((c) => c.level < 3);
     return next
       ? `"${concept.name}" is mastered. Briefly celebrate, then move on to "${next.name}". Mix a quick "${concept.name}" question into later practice so it sticks.`
-      : `Every concept in the plan is mastered. Run a short mixed review (3 to 4 questions across all concepts), then suggest what to learn next.`;
+      : `Every concept in the plan is mastered! Celebrate their hard work warmly and specifically, and tell them how far they've come.`;
   }
   if (hintsUsed > 0) {
     return `Right, but with ${hintsUsed} hint(s). Ask a similar question at the same difficulty and see if they can do it alone this time.`;
