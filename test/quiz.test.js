@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseQuiz } from "../public/js/quiz.js";
+import { parseQuiz, gradeBlank, gradeOrder, gradeMatch, shuffled } from "../public/js/quiz.js";
 
 const reply = `Nice thinking! Let's check one thing.
 
@@ -15,7 +15,7 @@ answer: b
 test("reads a quiz block and removes it from the visible text", () => {
   const { text, quiz } = parseQuiz(reply);
   assert.equal(text, "Nice thinking! Let's check one thing.");
-  assert.deepEqual(quiz, { question: 'Which helper verb does "aller" use?', options: ["avoir", "être", "faire"], answer: 1, concept: "" });
+  assert.deepEqual(quiz, { kind: "choice", question: 'Which helper verb does "aller" use?', options: ["avoir", "être", "faire"], answer: 1, concept: "" });
 });
 
 test("tolerates the small variations models produce", () => {
@@ -43,4 +43,40 @@ test("a broken block is shown as text but never reveals the answer", () => {
 
 test("replies without a quiz pass through untouched", () => {
   assert.deepEqual(parseQuiz("What do you think the verb is?"), { text: "What do you think the verb is?", quiz: null });
+});
+
+test("fill in the blank: reads alternatives and grades kindly", () => {
+  const { quiz } = parseQuiz("Try it:\n```blank\nquestion: Hier, je ___ allé au parc.\nanswer: suis | suis allé\n```");
+  assert.deepEqual(quiz.answers, ["suis", "suis allé"]);
+  assert.equal(gradeBlank(quiz, "  Suis. "), "correct");
+  assert.equal(gradeBlank(quiz, "suis allé"), "correct");
+  assert.equal(gradeBlank(quiz, "ai"), "incorrect");
+  const accent = parseQuiz("```blank\nquestion: Elle est ___ hier.\nanswer: allée\n```").quiz;
+  assert.equal(gradeBlank(accent, "allee"), "partial"); // right word, missing accent
+  assert.equal(parseQuiz("```blank\nquestion: No blank here\nanswer: x\n```").quiz, null);
+});
+
+test("put in order: reads steps and grades position by position", () => {
+  const { quiz } = parseQuiz("```order\nquestion: Solve 2x + 3 = 7\n1. Subtract 3 from both sides\n2. Divide both sides by 2\n3. Check by plugging in\n```");
+  assert.deepEqual(quiz.items, ["Subtract 3 from both sides", "Divide both sides by 2", "Check by plugging in"]);
+  assert.equal(gradeOrder(quiz, [0, 1, 2]), "correct");
+  assert.equal(gradeOrder(quiz, [0, 2, 1]), "incorrect");
+  const four = { items: ["a", "b", "c", "d"] };
+  assert.equal(gradeOrder(four, [0, 1, 3, 2]), "partial");
+});
+
+test("matching: reads pairs in several styles and grades", () => {
+  const { quiz } = parseQuiz("```match\nquestion: Match the words\nchien = dog\nchat → cat\n- oiseau: bird\n```");
+  assert.deepEqual(quiz.pairs.map((p) => p.right), ["dog", "cat", "bird"]);
+  assert.equal(gradeMatch(quiz, [0, 1, 2]), "correct");
+  assert.equal(gradeMatch(quiz, [0, 2, 1]), "incorrect");
+  // a block labeled quiz that is really a matching list
+  assert.equal(parseQuiz("```quiz\nMatch them\nun = one\ndeux = two\n```").quiz.kind, "match");
+});
+
+test("shuffling never leaves an order question already solved", () => {
+  let seed = 0;
+  const notRandom = () => 0.999 - (seed++ % 2) * 0.998;
+  for (let n = 2; n < 7; n++) assert.ok(shuffled(n, notRandom).some((v, i) => v !== i));
+  assert.ok(shuffled(3, () => 0.99).some((v, i) => v !== i)); // even a "random" that never shuffles
 });

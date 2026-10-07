@@ -1,0 +1,31 @@
+name: Feedback on Sage
+description: Tell us how Sage worked for you
+title: "Feedback: "
+labels: [feedback]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for trying Sage! Please don't include personal details.
+  - type: input
+    id: subject
+    attributes:
+      label: What were you studying?
+      placeholder: e.g. French verbs, diagramming sentences
+  - type: dropdown
+    id: helped
+    attributes:
+      label: Did Sage help you understand it better?
+      options: ["Yes, a lot", "A little", "Not really"]
+  - type: textarea
+    id: good
+    attributes:
+      label: What worked well?
+  - type: textarea
+    id: bad
+    attributes:
+      label: What was confusing, annoying or wrong?
+  - type: input
+    id: device
+    attributes:
+      label: What device and browser did you use?
+      placeholder: e.g. Chromebook with Chrome, Windows laptop with Edge

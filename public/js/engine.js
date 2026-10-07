@@ -107,13 +107,13 @@ export async function loadEngine(fast, onProgress = () => {}) {
     },
 
     // Asks for JSON matching `schema`; returns the parsed object or null.
-    async json({ messages, schema, signal }) {
+    async json({ messages, schema, signal, maxTokens = 400 }) {
       const unwatch = watch(signal);
       try {
         const reply = await engine.chat.completions.create({
           messages,
           temperature: 0,
-          max_tokens: 400,
+          max_tokens: maxTokens,
           response_format: { type: "json_object", schema: JSON.stringify(schema) },
         });
         if (signal?.aborted) throw new DOMException("Stopped", "AbortError");

@@ -6,6 +6,12 @@ export const LEVELS = ["new", "learning", "getting it", "mastered"];
 
 // How many correct answers in a row (without leaning on hints) count as mastery.
 const MASTERY_STREAK = 3;
+// Spaced review: mastered concepts come back for a quick check after these
+// many days. All gaps stay under the 5-day idle cleanup (see housekeeping.js),
+// so a review is never wiped before it's due.
+export const REVIEW_DAYS = [1, 2, 4];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 // How many misses in a row before the tutor must change its approach.
 const STRUGGLE_THRESHOLD = 2;
 
@@ -69,9 +75,11 @@ function findConcept(learner, conceptName) {
 // Record one check-for-understanding result and return pacing guidance.
 //   result: "correct" | "partial" | "incorrect"
 //   hintsUsed: how many hints the student needed for this question
-export function recordCheck(learner, conceptName, result, hintsUsed = 0) {
+export function recordCheck(learner, conceptName, result, hintsUsed = 0, now = Date.now()) {
   const concept = findConcept(learner, conceptName);
   concept.attempts += 1;
+  const wasMastered = concept.level === 3;
+  const wasDue = isDue(concept, now);
 
   // A right answer that needed lots of hints shows progress but not mastery yet.
   const independent = result === "correct" && hintsUsed === 0;
@@ -93,7 +101,20 @@ export function recordCheck(learner, conceptName, result, hintsUsed = 0) {
   else if (concept.streak >= 2 || concept.level === 3) concept.level = 2;
   else concept.level = 1;
 
-  return { concept: { ...concept, levelName: LEVELS[concept.level] }, pacing: pacingFor(learner, concept, result, hintsUsed) };
+  // Schedule spaced reviews.
+  let pacing;
+  if (concept.level === 3 && !wasMastered) {
+    concept.reviewStep = 0;
+    concept.reviewDue = now + REVIEW_DAYS[0] * DAY_MS;
+  } else if (concept.level === 3 && wasDue && result === "correct") {
+    concept.reviewStep = (concept.reviewStep ?? 0) + 1;
+    concept.reviewDue = concept.reviewStep < REVIEW_DAYS.length ? now + REVIEW_DAYS[concept.reviewStep] * DAY_MS : null;
+    pacing = `Review check: they still remember "${concept.name}" after a break. That's how you know it's sticking! Tell them warmly, then continue.`;
+  } else if (concept.level < 3) {
+    concept.reviewDue = null; // it has to be mastered again first
+  }
+
+  return { concept: { ...concept, levelName: LEVELS[concept.level] }, pacing: pacing || pacingFor(learner, concept, result, hintsUsed) };
 }
 
 function pacingFor(learner, concept, result, hintsUsed) {
@@ -125,10 +146,20 @@ function pacingFor(learner, concept, result, hintsUsed) {
   return `Correct. Keep the same difficulty for one more question to confirm it wasn't a lucky guess.`;
 }
 
-export function summary(learner) {
+function isDue(concept, now) {
+  return concept.level === 3 && typeof concept.reviewDue === "number" && concept.reviewDue <= now;
+}
+
+// Mastered concepts whose spaced review is due.
+export function dueForReview(learner, now = Date.now()) {
+  return learner.concepts.filter((c) => isDue(c, now));
+}
+
+export function summary(learner, now = Date.now()) {
   return {
     topic: learner.topic,
     concepts: learner.concepts.map((c) => ({
+      due: isDue(c, now),
       id: c.id,
       name: c.name,
       level: c.level,

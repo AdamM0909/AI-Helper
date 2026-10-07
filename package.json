@@ -13,7 +13,11 @@
   },
   "devDependencies": {
     "@mlc-ai/web-llm": "^0.2.85",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/fra": "^1.0.0",
+    "@tesseract.js-data/spa": "^1.0.0",
     "dompurify": "^3.4.16",
-    "marked": "^18.1.0"
+    "marked": "^18.1.0",
+    "tesseract.js": "^7.0.0"
   }
 }
