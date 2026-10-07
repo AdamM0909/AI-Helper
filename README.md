@@ -14,30 +14,25 @@ A sidebar shows the lesson plan and how far you've got on each concept (new → 
 
 ## Using Sage
 
-Open the link, for example `https://adamm0909.github.io/AI-Helper/`, fill in what you're stuck on, pick an AI size, and start.
+Open the link, for example `https://adamm0909.github.io/AI-Helper/`, fill in what you're stuck on, and start.
 
-The first time, the AI downloads (1 to 5 GB depending on size), which takes a few minutes. After that, it stays ready on the device, **even after closing the tab or the browser** (for example, when students have to close everything before a test), so Sage opens in seconds.
+The first time, the AI (Qwen2.5 7B, about a 5 GB download) downloads, which takes a few minutes. After that, it stays ready on the device, **even after closing the tab or the browser** (for example, when students have to close everything before a test), so Sage opens in seconds.
 
-| AI size | Download | Good for |
-|---|---|---|
-| Light | 1 GB | Phones, Chromebooks, older laptops |
-| Standard | 2 GB | Most laptops |
-| Strong | 5 GB | Gaming PCs, newer Macs. Teaches best. |
+It needs a reasonably capable device, such as a recent laptop or desktop with at least 8 GB of memory.
 
 ### Storage: Sage tidies up after itself
 
 - **When a pathway is finished,** Sage celebrates, then asks if you'd like to delete the chat and free up the space. You can say yes or keep going.
 - **After 5 days without using Sage,** the next time you open it, Sage clears the old chat and the downloaded AI to give your storage back, and lets you know.
 - **Anytime,** the start screen and sidebar show how much space Sage is using, with a **Free up space** button.
-- Switching AI sizes deletes the old one automatically.
 
 A web page can't run when it's closed, so the 5-day cleanup happens the next time Sage is opened. Browsers also clear site storage by themselves when a device runs low on space.
 
-**What it needs:** a browser with WebGPU. That means recent Chrome or Edge (Windows, Mac, Chromebook, Android) or Safari on an up-to-date iPhone or Mac. Sage tells you if your browser can't run it. If a size crashes or runs slowly, click **New topic** and choose a smaller one.
+**What it needs:** a browser with WebGPU. That means recent Chrome or Edge (Windows, Mac, Chromebook, Android) or Safari on an up-to-date iPhone or Mac. Sage tells you if your browser can't run it. If it runs out of memory, close other tabs and apps and reload.
 
 **School networks** sometimes block the AI download (it comes from huggingface.co). If it won't download at school, do the first load at home. After that, it loads from the device without downloading.
 
-**Sage can make mistakes.** Free models that fit in a browser are much smaller than ChatGPT or Claude. Sage is good for practice and explanations, but double-check anything important with your teacher or textbook.
+**Sage can make mistakes.** Free models that run in a browser are much smaller than ChatGPT or Claude. Sage is good for practice and explanations, but double-check anything important with your teacher or textbook.
 
 ## Publishing it (one-time setup)
 
