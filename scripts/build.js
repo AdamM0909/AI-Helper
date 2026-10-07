@@ -10,6 +10,18 @@ cpSync("node_modules/@mlc-ai/web-llm/lib/index.js", "_site/vendor/web-llm.js");
 cpSync("node_modules/marked/lib/marked.umd.js", "_site/vendor/marked.js");
 cpSync("node_modules/dompurify/dist/purify.min.js", "_site/vendor/purify.js");
 
+// Photo reading (OCR): Tesseract, its engine, and English/French/Spanish data.
+mkdirSync("_site/vendor/tesseract/core", { recursive: true });
+mkdirSync("_site/vendor/tesseract/lang");
+cpSync("node_modules/tesseract.js/dist/tesseract.esm.min.js", "_site/vendor/tesseract/tesseract.esm.js");
+cpSync("node_modules/tesseract.js/dist/worker.min.js", "_site/vendor/tesseract/worker.min.js");
+for (const file of readdirSync("node_modules/tesseract.js-core").filter((f) => f.endsWith("lstm.wasm.js"))) {
+  cpSync(`node_modules/tesseract.js-core/${file}`, `_site/vendor/tesseract/core/${file}`);
+}
+for (const lang of ["eng", "fra", "spa"]) {
+  cpSync(`node_modules/@tesseract.js-data/${lang}/4.0.0_best_int/${lang}.traineddata.gz`, `_site/vendor/tesseract/lang/${lang}.traineddata.gz`);
+}
+
 // Stamp every file reference with a version so browsers never mix files from
 // an old publish with a new one (GitHub Pages lets browsers reuse files for
 // about 10 minutes, which otherwise breaks the page right after an update).

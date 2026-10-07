@@ -1,5 +1,6 @@
 import { recordCheck, setLessonPlan, summary, LEVELS } from "./learner.js";
 import { guideFor } from "./subjects.js";
+import { parseQuiz, KIND_LABELS } from "./quiz.js";
 
 // The in-browser models only remember about 4,000 tokens (roughly 12,000
 // characters), so the conversation is trimmed to fit alongside the instructions.
@@ -19,8 +20,40 @@ Your voice:
 Every reply:
 1. Respond kindly to what they said: name exactly what they got right, or gently give ONE hint about what to look at again.
 2. Teach at most one small idea, with a short, friendly example.
-3. End with exactly one question that guides them to the next step.
+3. End with exactly one question that guides them to the next step: either an open question or a multiple-choice quiz (see below).
 Keep replies under 120 words.
+
+Choosing the kind of question:
+- Multiple choice, matching or put-in-order fit quick checks, recognizing the right form or rule, and moments when the student is struggling.
+- Fill in the blank fits recalling one exact word or form (a verb ending, a vocabulary word, a number).
+- An open question fits when they should produce or explain something themselves.
+- Mix them, and don't repeat the same kind twice in a row unless they're struggling.
+For an interactive question, end your reply with ONE block like these. The student sees buttons or a box, and answers stay hidden:
+\`\`\`quiz
+question: Which helper verb does "aller" use?
+a) avoir
+b) être
+c) faire
+answer: b
+\`\`\`
+\`\`\`blank
+question: Hier, je ___ allé au parc.
+answer: suis
+\`\`\`
+\`\`\`order
+question: Put the steps in order to solve 2x + 3 = 7
+- Subtract 3 from both sides
+- Divide both sides by 2
+- Check by plugging x back in
+\`\`\`
+(list the steps in the CORRECT order; the page shuffles them)
+\`\`\`match
+question: Match each word to its meaning
+chien = dog
+chat = cat
+oiseau = bird
+\`\`\`
+Multiple choice: 3 or 4 options, exactly one right, wrong options based on common mistakes. Don't ask a second question outside the block.
 
 Rules:
 - Never give the final answer to their question or homework. Teach with your own similar example instead.
@@ -203,13 +236,44 @@ export function soundsHarsh(reply) {
   return HARSH.test(reply);
 }
 
+// Grades an answer to an interactive question. The question carries its own
+// answer and the page has already graded it, so no model call is needed.
+//   answer: { kind, question, concept, result, given, correct, wrongTries }
+//     result: "correct" | "partial" | "incorrect"
+//     given / correct: the student's answer and the right one, as text
+function gradeAnswer(session, answer, emit) {
+  const learner = session.learner;
+  const concept = answer.concept || learner.concepts.find((c) => c.level < 3)?.name || learner.topic || "Practice";
+  // A right answer after wrong tries counts as needing help.
+  const hints = answer.result === "correct" ? answer.wrongTries : 0;
+  const { pacing } = recordCheck(learner, concept.slice(0, 80), answer.result, hints);
+  emit({ type: "progress", progress: summary(learner) });
+
+  const label = KIND_LABELS[answer.kind] || "question";
+  const intro = `They answered your ${label} "${answer.question}" with: ${answer.given}.`;
+  if (answer.result === "correct") {
+    return { guidance: [`${intro} That's right! Briefly say why it's right. ${pacing}`], expected: "" };
+  }
+  const secret = `(For you only, DO NOT reveal it: the right answer is ${answer.correct}.)`;
+  const retry = "They can try again right there. Gently explain what's tempting about their answer, give ONE hint, and invite them to try again. Don't ask a new question yet.";
+  const partial = answer.kind === "blank" ? "They have the right word but the accents are off. Warmly point them to the accents." : "Part of it is right. Warmly name what they got right, then hint at the rest.";
+  return {
+    guidance: [`${intro} ${answer.result === "partial" ? "That's partly right." : "That's not quite right yet."} ${secret}`, answer.result === "partial" ? partial : "", retry].filter(Boolean),
+    // Only short answers can be leak-checked; order and match answers are lists.
+    expected: answer.kind === "choice" || answer.kind === "blank" ? answer.correct.replace(/^"|"$/g, "") : "",
+  };
+}
+
 // Runs one student turn: grades their message, then streams the tutor's
 // reply through `emit` and saves both to session.messages.
-export async function tutorTurn(llm, session, studentText, emit, { signal } = {}) {
+//   answer: set when the student answered an interactive question (see gradeAnswer)
+//   extra: additional guidance for this reply (e.g. a warm-up review)
+export async function tutorTurn(llm, session, studentText, emit, { signal, answer, extra = [] } = {}) {
   session.messages.push({ role: "user", content: studentText });
 
-  const { guidance, expected } = await assess(llm, session, signal, emit);
-  guidance.push(...detectSituation(studentText));
+  const { guidance, expected } = answer ? gradeAnswer(session, answer, emit) : await assess(llm, session, signal, emit);
+  if (!answer) guidance.push(...detectSituation(studentText));
+  guidance.push(...extra);
 
   const history = recentHistory(session.messages);
   const generate = (lines) =>
@@ -224,11 +288,13 @@ export async function tutorTurn(llm, session, studentText, emit, { signal } = {}
 
   // Small models sometimes give the answer away or sound harsh anyway.
   // Catch that and rewrite once.
+  // The quiz block is left out of these checks: its options may contain the answer on purpose.
+  const shown = parseQuiz(reply).text;
   const fixes = [];
-  if (revealsAnswer(reply, expected)) {
+  if (revealsAnswer(shown, expected)) {
     fixes.push(`IMPORTANT: Do not write "${expected}" or any other form of the answer. Give a hint that helps them work it out instead.`);
   }
-  if (soundsHarsh(reply)) {
+  if (soundsHarsh(shown)) {
     fixes.push(`IMPORTANT: Your last draft sounded harsh. Be gentle and encouraging. Instead of "wrong" or "incorrect", say something like "not quite yet" and guide them. Don't use "obviously", "simply", "clearly" or "easy".`);
   }
   if (fixes.length > 0) {
