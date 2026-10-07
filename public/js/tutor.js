@@ -1,5 +1,6 @@
 import { recordCheck, setLessonPlan, summary, LEVELS } from "./learner.js";
 import { guideFor } from "./subjects.js";
+import { parseQuiz, letterFor } from "./quiz.js";
 
 // The in-browser models only remember about 4,000 tokens (roughly 12,000
 // characters), so the conversation is trimmed to fit alongside the instructions.
@@ -19,8 +20,22 @@ Your voice:
 Every reply:
 1. Respond kindly to what they said: name exactly what they got right, or gently give ONE hint about what to look at again.
 2. Teach at most one small idea, with a short, friendly example.
-3. End with exactly one question that guides them to the next step.
+3. End with exactly one question that guides them to the next step: either an open question or a multiple-choice quiz (see below).
 Keep replies under 120 words.
+
+Choosing the kind of question:
+- Multiple choice fits quick checks, picking the right form or rule, spotting a mistake, and moments when the student is struggling or unsure.
+- An open question fits when they should produce or explain something themselves: write a sentence, solve a step, conjugate a verb, say why.
+- Mix them. Don't use multiple choice twice in a row unless they're struggling.
+To ask multiple choice, end your reply with a quiz block like this. The student sees clickable buttons, and the answer line stays hidden:
+\`\`\`quiz
+question: Which helper verb does "aller" use in the passé composé?
+a) avoir
+b) être
+c) faire
+answer: b
+\`\`\`
+Use 3 or 4 options, exactly one right, with wrong options based on common mistakes. Don't ask a second question outside the block.
 
 Rules:
 - Never give the final answer to their question or homework. Teach with your own similar example instead.
@@ -203,13 +218,42 @@ export function soundsHarsh(reply) {
   return HARSH.test(reply);
 }
 
+// Grades a clicked multiple-choice answer. The quiz carries its own answer,
+// so no model call is needed.
+//   choice: { question, options, answer, concept, picked, wrongTries }
+function gradeChoice(session, choice, emit) {
+  const learner = session.learner;
+  const right = choice.picked === choice.answer;
+  const concept = choice.concept || learner.concepts.find((c) => c.level < 3)?.name || learner.topic || "Practice";
+  // A right answer after wrong tries counts as needing help.
+  const { pacing } = recordCheck(learner, concept.slice(0, 80), right ? "correct" : "incorrect", right ? choice.wrongTries : 0);
+  emit({ type: "progress", progress: summary(learner) });
+
+  const picked = `${letterFor(choice.picked)}) "${choice.options[choice.picked]}"`;
+  const correct = choice.options[choice.answer];
+  if (right) {
+    return {
+      guidance: [`They answered your multiple-choice question "${choice.question}" with ${picked}. That's right! Briefly say why it's right. ${pacing}`],
+      expected: "",
+    };
+  }
+  return {
+    guidance: [
+      `They answered your multiple-choice question "${choice.question}" with ${picked}. That's not quite right yet. (For you only, DO NOT reveal it: the right option is ${letterFor(choice.answer)}) "${correct}".)`,
+      "The other options stay clickable so they can try again. Gently explain why their pick is a tempting choice, give ONE hint, and invite them to pick again. Don't ask a new question yet.",
+    ],
+    expected: correct,
+  };
+}
+
 // Runs one student turn: grades their message, then streams the tutor's
 // reply through `emit` and saves both to session.messages.
-export async function tutorTurn(llm, session, studentText, emit, { signal } = {}) {
+//   choice: set when the student clicked a multiple-choice answer
+export async function tutorTurn(llm, session, studentText, emit, { signal, choice } = {}) {
   session.messages.push({ role: "user", content: studentText });
 
-  const { guidance, expected } = await assess(llm, session, signal, emit);
-  guidance.push(...detectSituation(studentText));
+  const { guidance, expected } = choice ? gradeChoice(session, choice, emit) : await assess(llm, session, signal, emit);
+  if (!choice) guidance.push(...detectSituation(studentText));
 
   const history = recentHistory(session.messages);
   const generate = (lines) =>
@@ -224,11 +268,13 @@ export async function tutorTurn(llm, session, studentText, emit, { signal } = {}
 
   // Small models sometimes give the answer away or sound harsh anyway.
   // Catch that and rewrite once.
+  // The quiz block is left out of these checks: its options may contain the answer on purpose.
+  const shown = parseQuiz(reply).text;
   const fixes = [];
-  if (revealsAnswer(reply, expected)) {
+  if (revealsAnswer(shown, expected)) {
     fixes.push(`IMPORTANT: Do not write "${expected}" or any other form of the answer. Give a hint that helps them work it out instead.`);
   }
-  if (soundsHarsh(reply)) {
+  if (soundsHarsh(shown)) {
     fixes.push(`IMPORTANT: Your last draft sounded harsh. Be gentle and encouraging. Instead of "wrong" or "incorrect", say something like "not quite yet" and guide them. Don't use "obviously", "simply", "clearly" or "easy".`);
   }
   if (fixes.length > 0) {

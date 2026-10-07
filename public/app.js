@@ -2,6 +2,7 @@ import { createLearner, summary } from "./js/learner.js";
 import { tutorTurn } from "./js/tutor.js";
 import { DOWNLOAD_SIZE, checkDevice, isDownloaded, loadEngine, removeDownloads, storageUsed } from "./js/engine.js";
 import { IDLE_DAYS, idleTooLong, pathwayComplete } from "./js/housekeeping.js";
+import { parseQuiz, letterFor } from "./js/quiz.js";
 
 const $ = (sel) => document.querySelector(sel);
 const LEVEL_NAMES = ["not started", "learning", "getting it", "mastered"];
@@ -94,14 +95,69 @@ function addMessage(role, text, { html = false } = {}) {
     scrollToEnd(el);
     return el;
   }
-  el.innerHTML = `<div class="avatar"><svg><use href="#i-leaf"/></svg></div><div class="bubble"></div>`;
+  el.innerHTML = `<div class="avatar"><svg width="19" height="19" aria-hidden="true"><use href="#i-leaf"/></svg></div><div class="bubble"></div>`;
   const bubble = el.querySelector(".bubble");
   if (html) bubble.innerHTML = text;
-  else if (role === "tutor") bubble.innerHTML = render(text);
+  else if (role === "tutor") fillTutor(bubble, text, { done: true });
   else bubble.textContent = text;
   $("#messages").append(el);
   scrollToEnd(el);
   return bubble;
+}
+
+// ---- Multiple choice ----
+
+// Shows a tutor reply, turning a quiz block into answer buttons once the
+// reply has finished arriving.
+function fillTutor(bubble, text, { done = false, interactive = false } = {}) {
+  const { text: body, quiz } = parseQuiz(text);
+  bubble.innerHTML = render(body);
+  if (quiz && done) bubble.append(quizCard(quiz, interactive));
+}
+
+let activeQuiz = null; // only the newest question can be answered
+
+function quizCard(quiz, interactive) {
+  const card = document.createElement("div");
+  card.className = "quiz";
+  card.innerHTML = `<p class="quiz-q"></p><div class="quiz-options" role="group"></div><p class="quiz-hint muted fine"></p>`;
+  card.querySelector(".quiz-q").textContent = quiz.question;
+  card.querySelector(".quiz-hint").textContent = interactive ? "Tap the answer you think is right." : "";
+  let wrongTries = 0;
+
+  quiz.options.forEach((option, i) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "quiz-opt";
+    button.disabled = !interactive;
+    button.innerHTML = `<span class="quiz-letter"></span><span class="quiz-text"></span>`;
+    button.querySelector(".quiz-letter").textContent = letterFor(i);
+    button.querySelector(".quiz-text").textContent = option;
+    button.addEventListener("click", () => {
+      if (busy || !llm || button.disabled) return;
+      const right = i === quiz.answer;
+      button.classList.add(right ? "right" : "wrong");
+      button.disabled = true;
+      button.querySelector(".quiz-letter").innerHTML = right ? "✓" : "↺";
+      if (right) {
+        card.querySelectorAll(".quiz-opt").forEach((b) => (b.disabled = true));
+        card.classList.add("solved");
+        card.querySelector(".quiz-hint").textContent = wrongTries ? "You got there! 🌱" : "Nailed it! 🎉";
+        activeQuiz = null;
+      } else {
+        card.querySelector(".quiz-hint").textContent = "Not quite yet. Read Sage's hint, then try another one.";
+      }
+      send(`I chose ${letterFor(i)}) ${option}`, { ...quiz, picked: i, wrongTries });
+      if (!right) wrongTries += 1;
+    });
+    card.querySelector(".quiz-options").append(button);
+  });
+
+  if (interactive) {
+    activeQuiz?.querySelectorAll(".quiz-opt:not(.right):not(.wrong)").forEach((b) => (b.disabled = true));
+    activeQuiz = card;
+  }
+  return card;
 }
 
 let toastTimer;
@@ -335,7 +391,8 @@ function escapeHtml(text) {
 
 // ---- Chat ----
 
-async function send(text) {
+//   choice: set when the student clicked a multiple-choice answer
+async function send(text, choice) {
   if (busy || !llm || !text.trim()) return;
   busy = true;
   controller = new AbortController();
@@ -352,7 +409,7 @@ async function send(text) {
     if (event.type === "text") {
       reply += event.text;
       row.classList.remove("typing");
-      bubble.innerHTML = render(reply);
+      fillTutor(bubble, reply);
       scrollToEnd(row);
     } else if (event.type === "reset") {
       reply = "";
@@ -365,7 +422,11 @@ async function send(text) {
   };
 
   try {
-    await tutorTurn(llm, current, text.trim().slice(0, 4000), emit, { signal: controller.signal });
+    await tutorTurn(llm, current, text.trim().slice(0, 4000), emit, { signal: controller.signal, choice });
+    if (reply) {
+      fillTutor(bubble, reply, { done: true, interactive: true });
+      scrollToEnd(row);
+    }
     save();
     if (session === current && pathwayComplete(summary(current.learner))) offerCleanup();
   } catch (err) {
@@ -432,7 +493,12 @@ document.querySelector(".quick").addEventListener("click", (e) => {
   // Pick up where the student left off.
   openChat();
   showProgress(summary(session.learner));
-  for (const m of session.messages) addMessage(m.role === "user" ? "student" : "tutor", m.content);
+  session.messages.forEach((m, i) => {
+    if (m.role === "user") return addMessage("student", m.content);
+    // Only a question from Sage's latest message can still be answered.
+    const bubble = addMessage("tutor", "");
+    fillTutor(bubble, m.content, { done: true, interactive: i === session.messages.length - 1 });
+  });
   $("#chat-loading").hidden = false;
   try {
     await ensureEngine($("#chat-loading-bar"), $("#chat-loading-text"));

@@ -147,3 +147,59 @@ test("the tutor's instructions are nurturing", async () => {
   await tutorTurn(llm, { learner: createLearner(), messages: [] }, "hi", () => {});
   assert.match(llm.calls.chat[0][0].content, /Praise effort/);
 });
+
+const quiz = { question: 'Which helper verb does "aller" use?', options: ["avoir", "être", "faire"], answer: 1, concept: "Être verbs" };
+
+test("the tutor is taught to ask multiple choice with a quiz block", async () => {
+  const llm = fakeLLM({});
+  await tutorTurn(llm, { learner: createLearner(), messages: [] }, "hi", () => {});
+  const system = llm.calls.chat[0][0].content;
+  assert.match(system, /```quiz\nquestion:/);
+  assert.match(system, /Multiple choice fits/);
+});
+
+test("a clicked right answer is graded in code, without asking the model to grade", async () => {
+  const llm = fakeLLM({ replies: ["Yes! Être it is."] });
+  const session = { learner: createLearner(), messages: [] };
+  setLessonPlan(session.learner, "Passé composé", ["Avoir verbs", "Être verbs"]);
+  const events = [];
+
+  await tutorTurn(llm, session, "I chose B) être", (e) => events.push(e), { choice: { ...quiz, picked: 1, wrongTries: 0 } });
+
+  assert.equal(llm.calls.json.length, 0); // no grading call
+  assert.equal(session.learner.concepts[1].correct, 1);
+  assert.equal(session.learner.concepts[1].streak, 1);
+  assert.ok(events.some((e) => e.type === "progress"));
+  assert.match(llm.calls.chat[0][0].content, /That's right!/);
+});
+
+test("a clicked wrong answer gets a hint, keeps the answer hidden, and the leak check guards it", async () => {
+  const llm = fakeLLM({ replies: ["Close! The answer is être.", "Close! Think about verbs of movement. Want to try again?"] });
+  const session = { learner: createLearner(), messages: [] };
+  const events = [];
+
+  await tutorTurn(llm, session, "I chose A) avoir", (e) => events.push(e), { choice: { ...quiz, picked: 0, wrongTries: 0 } });
+
+  const system = llm.calls.chat[0][0].content;
+  assert.match(system, /DO NOT reveal it: the right option is B\) "être"/);
+  assert.match(system, /Don't ask a new question yet/);
+  assert.ok(events.some((e) => e.type === "reset")); // first draft named the answer
+  assert.equal(session.messages.at(-1).content, "Close! Think about verbs of movement. Want to try again?");
+  assert.equal(session.learner.concepts[0].missesInRow, 1);
+});
+
+test("right after wrong tries counts as needing help, not mastery progress", async () => {
+  const llm = fakeLLM({});
+  const session = { learner: createLearner(), messages: [] };
+  await tutorTurn(llm, session, "I chose B) être", () => {}, { choice: { ...quiz, picked: 1, wrongTries: 2 } });
+  assert.equal(session.learner.concepts[0].correct, 1);
+  assert.equal(session.learner.concepts[0].level, 1); // not counted as an independent streak
+});
+
+test("options inside a new quiz don't trip the leak check", async () => {
+  const reply = "Let's try one more.\n\n```quiz\nquestion: Pick the helper for aller\na) avoir\nb) être\nanswer: b\n```";
+  const llm = fakeLLM({ replies: [reply] });
+  const events = [];
+  await tutorTurn(llm, { learner: createLearner(), messages: [] }, "I chose A) avoir", (e) => events.push(e), { choice: { ...quiz, picked: 0, wrongTries: 0 } });
+  assert.ok(!events.some((e) => e.type === "reset"));
+});

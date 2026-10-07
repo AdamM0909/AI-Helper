@@ -3,7 +3,7 @@
 Sage is a tutor for high school students who are stuck on something, like diagramming sentences, French verb tenses, algebra or chemistry. Unlike a general chatbot, it won't just give the answer. It:
 
 - **Finds out where you are first.** It asks a couple of questions before explaining anything.
-- **Teaches in small steps** and checks after each one with a question you have to answer.
+- **Teaches in small steps** and checks after each one with a question: sometimes an open question, sometimes clickable multiple choice, whichever fits the moment.
 - **Gives hints instead of answers.** When you're wrong, it gives a hint so you can find the answer yourself.
 - **Adapts to your pace.** Every answer is graded and tracked per concept. Get a few right in a row and it speeds up. Miss twice and it slows down and explains it a different way.
 - **Won't do your homework.** If you paste assignment questions, it teaches the skill with its own similar examples, then lets you do the real ones.
@@ -50,6 +50,7 @@ Every time you change something on `main`, the site updates by itself.
 | `public/js/subjects.js` | Teaching notes and common mistakes for each subject. Add your own here. |
 | `public/js/learner.js` | Tracks progress per concept and decides the pacing advice. Plain code, no AI, so the rules are predictable and easy to change |
 | `public/js/engine.js` | Loads the AI in the browser and talks to it |
+| `public/js/quiz.js` | Reads multiple-choice questions out of Sage's replies |
 | `public/js/housekeeping.js` | When Sage tidies up: after a finished pathway, or after 5 days without use |
 | `public/app.js`, `index.html`, `styles.css`, `theme.js` | The web page, including light and dark mode |
 | `scripts/build.js` | Assembles the site, with its libraries, into `_site/` |
@@ -65,7 +66,8 @@ Browser-sized models are small, so Sage gives them extra structure:
 5. **Short, clear rules plus an example reply.** Small models copy examples much better than they follow long instructions.
 6. **Answer-leak check.** If the tutor's reply gives away the answer the student got wrong, Sage throws it out and writes a hint instead.
 7. **A warm voice, with a kindness check.** Sage is told to be nurturing: praise effort, treat mistakes as normal, and never say things like "wrong", "obviously" or "it's easy". If a reply still sounds harsh, Sage rewrites it in a gentler way.
-8. **Fits the model's memory.** Only as much recent conversation as fits is sent, so the instructions never get cut off.
+8. **Multiple choice when it fits.** Sage picks multiple choice for quick checks, spotting the right form or rule, or when a student is struggling, and open questions when they should write or explain something themselves. It writes the question as a small `quiz` block that the page turns into buttons. Because the block includes the answer, clicks are graded instantly in code (no slow or unreliable AI grading). A wrong pick gets a gentle hint and the other options stay open, and a right answer that took retries counts as "needed help".
+9. **Fits the model's memory.** Only as much recent conversation as fits is sent, so the instructions never get cut off.
 
 ## Working on the code
 

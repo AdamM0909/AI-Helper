@@ -101,7 +101,7 @@ function pacingFor(learner, concept, result, hintsUsed) {
     return [
       `SLOW DOWN. The student has missed "${concept.name}" ${concept.missesInRow} times in a row.`,
       "Do not repeat the same explanation. Try a new angle: an everyday analogy, a worked example of a different problem, or break the idea into a smaller first step.",
-      "Then ask an easier question that checks only that smaller step. Reassure them warmly that this part is tricky for everyone and that they're making progress.",
+      "Then check only that smaller step with an easy multiple-choice question. Reassure them warmly that this part is tricky for everyone and that they're making progress.",
     ].join(" ");
   }
   if (result === "incorrect") {
@@ -120,7 +120,7 @@ function pacingFor(learner, concept, result, hintsUsed) {
     return `Right, but with ${hintsUsed} hint(s). Ask a similar question at the same difficulty and see if they can do it alone this time.`;
   }
   if (concept.streak >= 2) {
-    return `On a roll (${concept.streak} in a row). Speed up: ask a harder question and give less scaffolding.`;
+    return `On a roll (${concept.streak} in a row). Speed up: ask a harder open question where they produce the answer themselves (not multiple choice), with less scaffolding.`;
   }
   return `Correct. Keep the same difficulty for one more question to confirm it wasn't a lucky guess.`;
 }

@@ -283,6 +283,34 @@ fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 10px; }
   animation: dots 1.1s infinite ease-in-out; margin-top: 6px;
 }
 
+/* Multiple-choice questions */
+.quiz {
+  margin-top: 12px; padding: 14px; border-radius: 14px;
+  background: var(--surface-2); border: 1px solid var(--border);
+}
+.quiz-q { margin: 0 0 10px; font-weight: 650; }
+.quiz-options { display: grid; gap: 8px; }
+.quiz-opt {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 9px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface);
+  cursor: pointer; font-size: 0.95rem; transition: border-color 0.15s, transform 0.15s, background 0.2s;
+}
+.quiz-opt:hover:not(:disabled) { border-color: var(--accent); transform: translateX(2px); }
+.quiz-opt:disabled { cursor: default; }
+.quiz-opt:disabled:not(.right):not(.wrong) { opacity: 0.55; }
+.quiz-letter {
+  flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 0.85rem;
+}
+.quiz-opt.right { border-color: var(--l3); background: var(--accent-soft); }
+.quiz-opt.right .quiz-letter { background: var(--l3); color: var(--on-accent); }
+/* Gentle, not red: a wrong pick is just "not yet". */
+.quiz-opt.wrong { border-color: var(--warm); background: var(--warm-soft); }
+.quiz-opt.wrong .quiz-letter { background: var(--warm); color: var(--on-accent); }
+.quiz.solved { border-color: var(--l3); }
+.quiz-hint { margin: 10px 0 0; }
+.quiz-hint:empty { display: none; }
+
 .celebrate .bubble { background: linear-gradient(135deg, var(--accent-soft), var(--warm-soft)); border-color: transparent; }
 .celebrate h3 { margin: 0 0 6px; font-family: var(--font-round); font-size: 1.15rem; }
 .celebrate .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
